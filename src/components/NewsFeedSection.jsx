@@ -187,7 +187,7 @@ function ArticleReader({ item, onClose }) {
                 className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-cupl-red text-white font-medium rounded-xl hover:bg-red-800 transition"
                 style={item.url && item.url !== '#' ? {} : { pointerEvents: 'none', opacity: 0.5 }}>
                 <ExternalLink className="w-4 h-4" />
-                前往{getPlatformName(item.platform)}查看原帖
+                {item.url?.includes('baidu.com') ? '搜索查看相关帖子' : `前往${getPlatformName(item.platform)}查看原帖`}
               </a>
               <button className="flex items-center justify-center gap-2 px-6 py-3 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition">
                 <Bookmark className="w-4 h-4" />收藏
@@ -395,8 +395,8 @@ export default function NewsFeedSection() {
           </button>
         </div>
 
-        {/* 平台筛选 */}
-        <div className="flex flex-wrap gap-2 mb-8 justify-center">
+        {/* 平台筛选 + 单独抓取 */}
+        <div className="flex flex-wrap gap-2 mb-4 justify-center">
           {platforms.map(p => (
             <button key={p.id} onClick={() => setActivePlatform(p.id)}
               className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-1.5 ${
@@ -411,6 +411,25 @@ export default function NewsFeedSection() {
             </button>
           ))}
         </div>
+        {activePlatform !== 'all' && (
+          <div className="text-center mb-8">
+            <button
+              onClick={() => {
+                setCrawling(true)
+                fetch(`${API_BASE}/api/crawl`, {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ platform: activePlatform })
+                }).catch(() => {})
+                setTimeout(async () => { await fetchFromBackend(); setCrawling(false) }, 6000)
+              }}
+              disabled={crawling}
+              className="px-4 py-1.5 text-sm text-cupl-red border border-cupl-red/30 rounded-lg hover:bg-red-50 transition disabled:opacity-50 flex items-center gap-1.5 mx-auto"
+            >
+              {crawling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+              {crawling ? '抓取中...' : `单独抓取${platforms.find(p => p.id === activePlatform)?.name || ''}最新内容`}
+            </button>
+          </div>
+        )}
 
         {/* 内容网格 */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">

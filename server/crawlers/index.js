@@ -282,7 +282,7 @@ async function crawlXiaohongshu(db) {
             summary: snippet.substring(0, 300),
             full_content: snippet,
             images: [], author: '小红书用户',
-            url: href?.includes('xiaohongshu.com') ? href : `https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(term)}`,
+            url: href?.includes('xiaohongshu.com') ? href : `https://m.baidu.com/s?word=${encodeURIComponent('小红书 ' + term)}`,
             tags: ['小红书', '考研'], likes: 0, comments: 0,
           })
           n++

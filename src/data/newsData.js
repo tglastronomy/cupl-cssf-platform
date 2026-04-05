@@ -67,7 +67,7 @@ export const mockNewsItems = [
     author: '法学小透明', time: '最近',
     likes: 2341, comments: 156,
     tags: ['考研经验', '刑法学', '上岸'],
-    url: 'https://www.xiaohongshu.com/search_result?keyword=%E6%B3%95%E5%A4%A7%E8%80%83%E7%A0%94%20%E5%88%91%E6%B3%95%E5%AD%A6%20%E4%B8%8A%E5%B2%B8'
+    url: 'https://m.baidu.com/s?word=小红书+法大考研+刑法学+上岸经验'
   },
   {
     id: 7, platform: 'xiaohongshu',
@@ -77,7 +77,7 @@ export const mockNewsItems = [
     author: '刑诉上岸er', time: '最近',
     likes: 3456, comments: 278,
     tags: ['复试经验', '面试真题', '刑事诉讼法'],
-    url: 'https://www.xiaohongshu.com/search_result?keyword=%E6%B3%95%E5%A4%A7%20%E5%A4%8D%E8%AF%95%20%E5%88%91%E4%BA%8B%E8%AF%89%E8%AE%BC%E6%B3%95'
+    url: 'https://m.baidu.com/s?word=小红书+法大+复试+刑事诉讼法+经验'
   },
   {
     id: 8, platform: 'xiaohongshu',
@@ -87,7 +87,7 @@ export const mockNewsItems = [
     author: '背书达人', time: '最近',
     likes: 5678, comments: 432,
     tags: ['背诵框架', '法理学', '宪法学', '708'],
-    url: 'https://www.xiaohongshu.com/search_result?keyword=%E6%B3%95%E5%A4%A7%20708%20%E8%83%8C%E8%AF%B5%E6%A1%86%E6%9E%B6'
+    url: 'https://m.baidu.com/s?word=小红书+法大考研+708+背诵框架'
   },
   {
     id: 9, platform: 'xiaohongshu',
@@ -97,7 +97,7 @@ export const mockNewsItems = [
     author: '法大在读小姐姐', time: '最近',
     likes: 4230, comments: 312,
     tags: ['读研体验', '日常分享', '校园生活'],
-    url: 'https://www.xiaohongshu.com/search_result?keyword=%E6%B3%95%E5%A4%A7%20%E8%AF%BB%E7%A0%94%20%E6%97%A5%E5%B8%B8'
+    url: 'https://m.baidu.com/s?word=小红书+法大+读研+日常分享'
   },
   {
     id: 10, platform: 'wechat',
