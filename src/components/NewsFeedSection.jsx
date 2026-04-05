@@ -289,22 +289,25 @@ export default function NewsFeedSection() {
   // 启动时尝试连接后端
   useEffect(() => { fetchFromBackend() }, [fetchFromBackend])
 
-  // 手动刷新：触发后端爬取 + 拉取数据
+  // 手动刷新：触发后端异步爬取，立即拉取已有数据
   const handleRefresh = async () => {
     setIsRefreshing(true)
     setCrawling(true)
     try {
-      // 触发后端爬取
-      await fetch(`${API_BASE}/api/crawl`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      // 触发后端异步爬取（立即返回）
+      fetch(`${API_BASE}/api/crawl`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(activePlatform !== 'all' ? { platform: activePlatform } : {})
-      })
-      // 拉取最新数据
+      }).catch(() => {})
+      // 立即拉取已有数据
       await fetchFromBackend()
+      // 5秒后再拉一次，获取刚抓到的新数据
+      setTimeout(async () => {
+        await fetchFromBackend()
+        setCrawling(false)
+      }, 5000)
     } catch (e) {
-      // 后端不在线，刷新 mock 数据时间
       setLastUpdate(new Date())
     }
-    setCrawling(false)
     setIsRefreshing(false)
   }
 

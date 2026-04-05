@@ -282,7 +282,7 @@ async function crawlXiaohongshu(db) {
             summary: snippet.substring(0, 300),
             full_content: snippet,
             images: [], author: '小红书用户',
-            url: href?.startsWith('http') ? href : `https://www.sogou.com${href || ''}`,
+            url: href?.includes('xiaohongshu.com') ? href : `https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(term)}`,
             tags: ['小红书', '考研'], likes: 0, comments: 0,
           })
           n++
@@ -309,7 +309,8 @@ async function crawlXiaohongshu(db) {
           insertArticle(db, {
             platform: 'xiaohongshu', title, summary: snippet.substring(0, 300),
             full_content: snippet, images: [],
-            author: '小红书用户', url: href,
+            author: '小红书用户',
+            url: href.includes('xiaohongshu.com') ? href : `https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(term)}`,
             tags: ['小红书'], likes: 0, comments: 0,
           })
           n++

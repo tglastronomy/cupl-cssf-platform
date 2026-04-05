@@ -126,16 +126,27 @@ app.get('/api/stats', (req, res) => {
   })
 })
 
-// API: 触发抓取
-app.post('/api/crawl', async (req, res) => {
+// API: 触发抓取（异步执行，立即返回）
+let crawling = false
+app.post('/api/crawl', (req, res) => {
+  if (crawling) return res.json({ success: true, message: '抓取任务已在运行中' })
   const { platform } = req.body
-  try {
-    const result = platform ? await crawlPlatform(db, platform) : await crawlAll(db)
-    saveDb()
-    res.json({ success: true, ...result })
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message })
-  }
+  crawling = true
+  res.json({ success: true, message: `已开始${platform ? platform : '全平台'}抓取，请稍后刷新查看` })
+  // 后台异步执行
+  ;(async () => {
+    try {
+      if (platform) await crawlPlatform(db, platform)
+      else await crawlAll(db)
+      saveDb()
+    } catch (e) { console.error('Crawl error:', e.message) }
+    crawling = false
+  })()
+})
+
+// API: 抓取状态
+app.get('/api/crawl-status', (req, res) => {
+  res.json({ crawling })
 })
 
 // 定时任务
