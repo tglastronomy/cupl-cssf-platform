@@ -101,7 +101,7 @@ async function crawlZhihu(db) {
   for (const term of terms) {
     try {
       const res = await axios.get('https://www.zhihu.com/api/v4/search_v3', {
-        params: { t: 'general', q: term, correction: 1, offset: 0, limit: 20 },
+        params: { t: 'general', q: term, correction: 1, offset: 0, limit: 50 },
         headers: { 'User-Agent': UA, 'Accept': 'application/json' },
         timeout: 10000,
       })
@@ -153,9 +153,11 @@ async function crawlBilibili(db) {
     '法大昌平校区', '法大食堂', '法大法学',
   ]
   for (const term of terms) {
+    // 翻页抓取，每个词抓2页
+    for (let page = 1; page <= 2; page++) {
     try {
       const res = await axios.get('https://api.bilibili.com/x/web-interface/search/type', {
-        params: { search_type: 'video', keyword: term, page: 1, page_size: 20 },
+        params: { search_type: 'video', keyword: term, page, page_size: 50 },
         headers: { 'User-Agent': UA, 'Referer': 'https://www.bilibili.com' },
         timeout: 10000,
       })
@@ -182,6 +184,7 @@ async function crawlBilibili(db) {
       }
     } catch (e) { /* silent */ }
     await delay(400)
+    } // end page loop
   }
   logCrawl(db, 'bilibili', 'success', n, `${n} videos with covers`)
   return n
@@ -210,7 +213,7 @@ async function crawlXiaohongshu(db) {
   for (const term of terms) {
     try {
       const res = await axios.get('https://www.google.com/search', {
-        params: { q: `site:xiaohongshu.com ${term}`, num: 20 },
+        params: { q: `site:xiaohongshu.com ${term}`, num: 50 },
         headers: { 'User-Agent': UA, 'Accept-Language': 'zh-CN,zh;q=0.9' },
         timeout: 12000,
       })
@@ -225,7 +228,8 @@ async function crawlXiaohongshu(db) {
             platform: 'xiaohongshu', title,
             summary: snippet.substring(0, 300),
             full_content: snippet,
-            images: [], author: '小红书用户', url: href,
+            images: [], author: '小红书用户',
+            url: `https://m.baidu.com/s?word=${encodeURIComponent('小红书 ' + term)}`,
             tags: ['小红书', '考研'], likes: 0, comments: 0,
           })
           n++
@@ -239,7 +243,7 @@ async function crawlXiaohongshu(db) {
   for (const term of terms) {
     try {
       const res = await axios.get('https://www.bing.com/search', {
-        params: { q: `site:xiaohongshu.com ${term}`, count: 20 },
+        params: { q: `site:xiaohongshu.com ${term}`, count: 50 },
         headers: { 'User-Agent': UA },
         timeout: 12000,
       })
@@ -253,7 +257,8 @@ async function crawlXiaohongshu(db) {
             platform: 'xiaohongshu', title,
             summary: snippet.substring(0, 300),
             full_content: snippet,
-            images: [], author: '小红书用户', url: href,
+            images: [], author: '小红书用户',
+            url: `https://m.baidu.com/s?word=${encodeURIComponent('小红书 ' + term)}`,
             tags: ['小红书', '考研'], likes: 0, comments: 0,
           })
           n++
@@ -267,7 +272,7 @@ async function crawlXiaohongshu(db) {
   for (const term of terms.slice(0, 15)) {
     try {
       const res = await axios.get('https://www.sogou.com/web', {
-        params: { query: `小红书 ${term}`, num: 20 },
+        params: { query: `小红书 ${term}`, num: 50 },
         headers: { 'User-Agent': UA },
         timeout: 12000,
       })
@@ -282,7 +287,7 @@ async function crawlXiaohongshu(db) {
             summary: snippet.substring(0, 300),
             full_content: snippet,
             images: [], author: '小红书用户',
-            url: href?.includes('xiaohongshu.com') ? href : `https://m.baidu.com/s?word=${encodeURIComponent('小红书 ' + term)}`,
+            url: `https://m.baidu.com/s?word=${encodeURIComponent('小红书 ' + term)}`,
             tags: ['小红书', '考研'], likes: 0, comments: 0,
           })
           n++
@@ -296,7 +301,7 @@ async function crawlXiaohongshu(db) {
   for (const term of terms.slice(0, 15)) {
     try {
       const res = await axios.get('https://www.baidu.com/s', {
-        params: { wd: `小红书 ${term}`, rn: 20 },
+        params: { wd: `小红书 ${term}`, rn: 50 },
         headers: { 'User-Agent': UA },
         timeout: 12000,
       })
@@ -510,7 +515,7 @@ async function crawlDouyin(db) {
   for (const term of terms) {
     try {
       const res = await axios.get('https://www.bing.com/search', {
-        params: { q: `site:douyin.com ${term}`, count: 20 },
+        params: { q: `site:douyin.com ${term}`, count: 50 },
         headers: { 'User-Agent': UA },
         timeout: 12000,
       })
@@ -575,7 +580,7 @@ export async function crawlByKeyword(db, keyword) {
   // B站
   try {
     const res = await axios.get('https://api.bilibili.com/x/web-interface/search/type', {
-      params: { search_type: 'video', keyword, page: 1, page_size: 20 },
+      params: { search_type: 'video', keyword, page: 1, page_size: 50 },
       headers: { 'User-Agent': UA, 'Referer': 'https://www.bilibili.com' },
       timeout: 10000,
     })
@@ -602,8 +607,8 @@ export async function crawlByKeyword(db, keyword) {
         ? 'https://www.google.com/search'
         : 'https://www.bing.com/search'
       const params = engine === 'google'
-        ? { q: `site:xiaohongshu.com ${keyword}`, num: 20 }
-        : { q: `site:xiaohongshu.com ${keyword}`, count: 20 }
+        ? { q: `site:xiaohongshu.com ${keyword}`, num: 50 }
+        : { q: `site:xiaohongshu.com ${keyword}`, count: 50 }
       const res = await axios.get(url, { params, headers: { 'User-Agent': UA }, timeout: 12000 })
       const $ = cheerio.load(res.data)
       const selector = engine === 'google' ? 'div.g h3, div[data-hveid] h3' : 'li.b_algo h2 a'
@@ -613,11 +618,10 @@ export async function crawlByKeyword(db, keyword) {
         const title = $(el).find('h3').text().trim() || $(el).find('h2 a').text().trim()
         const snippet = $(el).find('.VwiC3b, .b_caption p').text().trim()
         if (title && href) {
-          const realUrl = href.includes('xiaohongshu.com') ? href
-            : `https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(keyword)}`
           if (insertArticle(db, {
             platform: 'xiaohongshu', title, summary: snippet.substring(0, 300),
-            full_content: snippet, images: [], author: '小红书用户', url: realUrl,
+            full_content: snippet, images: [], author: '小红书用户',
+            url: `https://m.baidu.com/s?word=${encodeURIComponent('小红书 ' + keyword)}`,
             tags: ['小红书', keyword], likes: 0, comments: 0,
           })) total++
         }
@@ -628,7 +632,7 @@ export async function crawlByKeyword(db, keyword) {
   // 知乎
   try {
     const res = await axios.get('https://www.zhihu.com/api/v4/search_v3', {
-      params: { t: 'general', q: keyword, correction: 1, offset: 0, limit: 20 },
+      params: { t: 'general', q: keyword, correction: 1, offset: 0, limit: 50 },
       headers: { 'User-Agent': UA, 'Accept': 'application/json' },
       timeout: 10000,
     })
