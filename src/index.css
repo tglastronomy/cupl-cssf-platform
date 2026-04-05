@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cupl-red: #8B0000;
+  --color-cupl-gold: #C4972F;
+  --color-cupl-dark: #1a1a2e;
+  --color-cupl-navy: #16213e;
+  --color-cupl-blue: #0f3460;
+  --color-cupl-light: #f8f9fa;
+  --color-cupl-gray: #6c757d;
+  --font-sans: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: #f5f5f7;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #c4972f;
+  border-radius: 3px;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 5px rgba(196, 151, 47, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(196, 151, 47, 0.6); }
+}
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes live-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+.animate-slide-in-left {
+  animation: slideInLeft 0.5s ease-out forwards;
+}
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+.animate-ticker {
+  animation: ticker 30s linear infinite;
+}
+.animate-live-dot {
+  animation: live-dot 1.5s ease-in-out infinite;
+}
+
+/* Card hover effect */
+.card-hover {
+  transition: all 0.3s ease;
+}
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+}
+
+/* Platform badge colors */
+.badge-xiaohongshu { background: #FE2C55; color: white; }
+.badge-bilibili { background: #00A1D6; color: white; }
+.badge-zhihu { background: #0066FF; color: white; }
+.badge-tieba { background: #4E6EF2; color: white; }
+.badge-wechat { background: #07C160; color: white; }
+.badge-weibo { background: #FF8200; color: white; }
+.badge-kaoyan { background: #E74C3C; color: white; }
+.badge-douyin { background: #000000; color: white; }
+
+/* Gradient text */
+.text-gradient {
+  background: linear-gradient(135deg, #8B0000, #C4972F);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
