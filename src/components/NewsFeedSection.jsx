@@ -182,13 +182,35 @@ function ArticleReader({ item, onClose }) {
             </div>
 
             {/* 操作按钮 */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <a href={item.url} target="_blank" rel="noopener noreferrer"
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-cupl-red text-white font-medium rounded-xl hover:bg-red-800 transition"
-                style={item.url && item.url !== '#' ? {} : { pointerEvents: 'none', opacity: 0.5 }}>
-                <ExternalLink className="w-4 h-4" />
-                {item.url?.includes('baidu.com') ? '搜索查看相关帖子' : `前往${getPlatformName(item.platform)}查看原帖`}
-              </a>
+            <div className="flex flex-col gap-3">
+              {item.platform === 'xiaohongshu' ? (
+                <>
+                  {/* 小红书专用：三种打开方式 */}
+                  <a href={`xhsdiscover://search/result?keyword=${encodeURIComponent(item.title.substring(0, 20))}`}
+                    className="flex items-center justify-center gap-2 px-6 py-3 bg-[#FE2C55] text-white font-medium rounded-xl hover:bg-[#e0264d] transition">
+                    <ExternalLink className="w-4 h-4" />
+                    在小红书App中打开（推荐）
+                  </a>
+                  <div className="flex gap-3">
+                    <a href={`https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(item.title.substring(0, 20))}&source=web_search_result_notes`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition text-sm">
+                      网页版搜索
+                    </a>
+                    <button onClick={() => { navigator.clipboard?.writeText(item.title); alert('标题已复制，可粘贴到小红书App搜索') }}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition text-sm">
+                      复制标题去搜索
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <a href={item.url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 px-6 py-3 bg-cupl-red text-white font-medium rounded-xl hover:bg-red-800 transition"
+                  style={item.url && item.url !== '#' ? {} : { pointerEvents: 'none', opacity: 0.5 }}>
+                  <ExternalLink className="w-4 h-4" />
+                  前往{getPlatformName(item.platform)}查看原帖
+                </a>
+              )}
               <button className="flex items-center justify-center gap-2 px-6 py-3 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition">
                 <Bookmark className="w-4 h-4" />收藏
               </button>
@@ -270,14 +292,18 @@ export default function NewsFeedSection() {
     ? newsItems
     : newsItems.filter(item => item.platform === activePlatform)
 
-  // 尝试从后端加载数据
+  // 尝试从后端加载数据，合并mock数据（保留后端没抓到的平台的mock内容）
   const fetchFromBackend = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE}/api/articles?limit=100&platform=${activePlatform}`)
       if (res.ok) {
         const data = await res.json()
         if (data.articles?.length > 0) {
-          setNewsItems(data.articles)
+          // 找出后端已有数据的平台
+          const backendPlatforms = new Set(data.articles.map(a => a.platform))
+          // 保留后端没覆盖到的平台的mock数据
+          const missingMock = mockNewsItems.filter(m => !backendPlatforms.has(m.platform))
+          setNewsItems([...data.articles, ...missingMock])
           setBackendOnline(true)
           setLastUpdate(new Date())
           return true
