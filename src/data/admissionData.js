@@ -82,6 +82,8 @@ export const programs = [
 ]
 
 export const scoreLines = [
+  { year: 2025, program: '刑法学', code: '030104', politics: 60, english: 60, professional: 90, total: 370, nationalLine: 325 },
+  { year: 2025, program: '诉讼法学', code: '030106', politics: 60, english: 60, professional: 90, total: 370, nationalLine: 325 },
   { year: 2024, program: '刑法学', code: '030104', politics: 60, english: 60, professional: 90, total: 370, nationalLine: 326 },
   { year: 2024, program: '诉讼法学', code: '030106', politics: 60, english: 60, professional: 90, total: 365, nationalLine: 326 },
   { year: 2023, program: '刑法学', code: '030104', politics: 60, english: 60, professional: 90, total: 380, nationalLine: 326 },
