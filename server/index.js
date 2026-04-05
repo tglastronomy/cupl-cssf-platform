@@ -75,7 +75,7 @@ app.use(express.json())
 
 // API: 文章列表（含完整内容）
 app.get('/api/articles', (req, res) => {
-  const { platform, category, page = 1, limit = 20, search } = req.query
+  const { platform, category, page = 1, limit = 100, search } = req.query
   const offset = (page - 1) * limit
   let where = '1=1'
   const params = []
@@ -152,9 +152,25 @@ cron.schedule('*/5 * * * *', async () => {
   } catch (e) { console.error(e.message) }
 })
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`\n  ===== 法大刑司考研谍报系统 =====`)
   console.log(`  http://localhost:${PORT}`)
   console.log(`  深度抓取 · 全文收录 · 图片提取`)
   console.log(`  ================================\n`)
+
+  // 启动时立即执行一次全平台爬取
+  const articleCount = queryOne('SELECT COUNT(*) as c FROM articles')?.c || 0
+  if (articleCount === 0) {
+    console.log('  数据库为空，启动首次全量抓取...')
+    try {
+      await crawlAll(db)
+      saveDb()
+      const newCount = queryOne('SELECT COUNT(*) as c FROM articles')?.c || 0
+      console.log(`  首次抓取完成，共收录 ${newCount} 条内容`)
+    } catch (e) {
+      console.error('  首次抓取失败:', e.message)
+    }
+  } else {
+    console.log(`  数据库已有 ${articleCount} 条内容`)
+  }
 })

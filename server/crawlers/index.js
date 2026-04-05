@@ -219,8 +219,8 @@ async function crawlXiaohongshu(db) {
         if (title && href) posts.push({ title, url: href, snippet })
       })
 
-      // 对每个找到的帖子进行深度抓取
-      for (const post of posts.slice(0, 5)) {
+      // 对每个找到的帖子进行深度抓取（上限不再限制）
+      for (const post of posts) {
         let fullContent = post.snippet
         let images = []
 
