@@ -547,7 +547,6 @@ export async function crawlAll(db) {
     { name: 'wechat', fn: crawlWechat },
     { name: 'tieba', fn: crawlTieba },
     { name: 'weibo', fn: crawlWeibo },
-    { name: 'kaoyan', fn: crawlKaoyan },
     { name: 'douyin', fn: crawlDouyin },
   ]
   for (const { name, fn } of crawlers) {
@@ -562,7 +561,97 @@ export async function crawlAll(db) {
 
 export async function crawlPlatform(db, platform) {
   const map = { zhihu: crawlZhihu, bilibili: crawlBilibili, xiaohongshu: crawlXiaohongshu,
-    wechat: crawlWechat, tieba: crawlTieba, weibo: crawlWeibo, kaoyan: crawlKaoyan, douyin: crawlDouyin }
+    wechat: crawlWechat, tieba: crawlTieba, weibo: crawlWeibo, douyin: crawlDouyin }
   if (!map[platform]) throw new Error(`Unknown: ${platform}`)
   return { platform, count: await map[platform](db) }
+}
+
+// 按关键词搜索抓取
+export async function crawlByKeyword(db, keyword) {
+  console.log(`[${new Date().toISOString()}] 关键词抓取: "${keyword}"`)
+  let total = 0
+
+  // 在所有平台搜索该关键词
+  // B站
+  try {
+    const res = await axios.get('https://api.bilibili.com/x/web-interface/search/type', {
+      params: { search_type: 'video', keyword, page: 1, page_size: 20 },
+      headers: { 'User-Agent': UA, 'Referer': 'https://www.bilibili.com' },
+      timeout: 10000,
+    })
+    if (res.data?.data?.result) {
+      for (const v of res.data.data.result) {
+        const title = (v.title || '').replace(/<[^>]+>/g, '')
+        if (title.length < 5) continue
+        const cover = v.pic?.startsWith('//') ? `https:${v.pic}` : v.pic
+        if (insertArticle(db, {
+          platform: 'bilibili', title, summary: (v.description || '').substring(0, 200),
+          full_content: v.description || '', images: cover ? [cover] : [],
+          author: v.author || 'UP主', url: `https://www.bilibili.com/video/${v.bvid}`,
+          tags: ['B站', keyword], likes: v.like || 0, comments: v.review || 0,
+          published_at: v.pubdate ? new Date(v.pubdate * 1000).toISOString() : null,
+        })) total++
+      }
+    }
+  } catch (e) { /* silent */ }
+
+  // 小红书 via Google + Bing
+  for (const engine of ['google', 'bing']) {
+    try {
+      const url = engine === 'google'
+        ? 'https://www.google.com/search'
+        : 'https://www.bing.com/search'
+      const params = engine === 'google'
+        ? { q: `site:xiaohongshu.com ${keyword}`, num: 20 }
+        : { q: `site:xiaohongshu.com ${keyword}`, count: 20 }
+      const res = await axios.get(url, { params, headers: { 'User-Agent': UA }, timeout: 12000 })
+      const $ = cheerio.load(res.data)
+      const selector = engine === 'google' ? 'div.g h3, div[data-hveid] h3' : 'li.b_algo h2 a'
+      $(engine === 'google' ? 'div.g' : 'li.b_algo').each((_, el) => {
+        const a = $(el).find('a[href*="xiaohongshu.com"]').first()
+        const href = a.attr('href') || $(el).find('h2 a').attr('href')
+        const title = $(el).find('h3').text().trim() || $(el).find('h2 a').text().trim()
+        const snippet = $(el).find('.VwiC3b, .b_caption p').text().trim()
+        if (title && href) {
+          const realUrl = href.includes('xiaohongshu.com') ? href
+            : `https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(keyword)}`
+          if (insertArticle(db, {
+            platform: 'xiaohongshu', title, summary: snippet.substring(0, 300),
+            full_content: snippet, images: [], author: '小红书用户', url: realUrl,
+            tags: ['小红书', keyword], likes: 0, comments: 0,
+          })) total++
+        }
+      })
+    } catch (e) { /* silent */ }
+  }
+
+  // 知乎
+  try {
+    const res = await axios.get('https://www.zhihu.com/api/v4/search_v3', {
+      params: { t: 'general', q: keyword, correction: 1, offset: 0, limit: 20 },
+      headers: { 'User-Agent': UA, 'Accept': 'application/json' },
+      timeout: 10000,
+    })
+    if (res.data?.data) {
+      for (const item of res.data.data) {
+        if (!item.object) continue
+        const obj = item.object
+        const title = (obj.title || obj.question?.title || '').replace(/<[^>]+>/g, '')
+        if (title.length < 5) continue
+        if (insertArticle(db, {
+          platform: 'zhihu', title,
+          summary: (obj.excerpt || '').substring(0, 200),
+          full_content: (obj.excerpt || obj.content || '').substring(0, 2000),
+          images: [], author: obj.author?.name || '匿名',
+          url: obj.url || `https://www.zhihu.com/question/${obj.question?.id}`,
+          tags: ['知乎', keyword], likes: obj.voteup_count || 0, comments: obj.comment_count || 0,
+          published_at: obj.created_time ? new Date(obj.created_time * 1000).toISOString() : null,
+        })) total++
+      }
+    }
+  } catch (e) { /* silent */ }
+
+  console.log(`  关键词 "${keyword}" 抓取完成: ${total} items`)
+  logCrawl(db, 'keyword', 'success', total, `Keyword: ${keyword}`)
+  return { keyword, count: total }
 }

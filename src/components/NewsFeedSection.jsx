@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { platforms, mockNewsItems, newsCategories } from '../data/newsData'
-import { Heart, MessageCircle, Clock, ExternalLink, RefreshCw, Rss, X, User, Share2, Bookmark, Image, Loader2, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Heart, MessageCircle, Clock, ExternalLink, RefreshCw, Rss, X, User, Share2, Bookmark, Image, Loader2, AlertTriangle, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 
 const API_BASE = 'https://cupl-cssf-api.onrender.com'
 
@@ -263,6 +263,8 @@ export default function NewsFeedSection() {
   const [selectedItem, setSelectedItem] = useState(null)
   const [backendOnline, setBackendOnline] = useState(false)
   const [crawling, setCrawling] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searching, setSearching] = useState(false)
 
   const filtered = activePlatform === 'all'
     ? newsItems
@@ -311,6 +313,26 @@ export default function NewsFeedSection() {
     setIsRefreshing(false)
   }
 
+  // 关键词搜索抓取
+  const handleSearch = async (e) => {
+    e?.preventDefault()
+    if (!searchQuery.trim() || searchQuery.trim().length < 2) return
+    setSearching(true)
+    try {
+      fetch(`${API_BASE}/api/search-crawl`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyword: searchQuery.trim() })
+      }).catch(() => {})
+      // 先拉已有数据
+      await fetchFromBackend()
+      // 8秒后再拉一次获取搜索结果
+      setTimeout(async () => {
+        await fetchFromBackend()
+        setSearching(false)
+      }, 8000)
+    } catch (e) { setSearching(false) }
+  }
+
   // 定时从后端拉取
   useEffect(() => {
     const interval = setInterval(() => { fetchFromBackend() }, 60000)
@@ -333,13 +355,34 @@ export default function NewsFeedSection() {
           </p>
         </div>
 
+        {/* 搜索框 */}
+        <form onSubmit={handleSearch} className="bg-white rounded-xl p-4 mb-4 border border-gray-100 shadow-sm">
+          <div className="flex gap-2">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="输入关键词搜索抓取（如：法大刑法真题、复试经验、导师推荐...）"
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-cupl-red/30 focus:border-cupl-red"
+              />
+            </div>
+            <button type="submit" disabled={searching || !searchQuery.trim()}
+              className="px-5 py-2.5 bg-cupl-red text-white rounded-xl text-sm font-medium hover:bg-red-800 transition disabled:opacity-50 flex items-center gap-2 shrink-0">
+              {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              {searching ? '搜索中...' : '搜索抓取'}
+            </button>
+          </div>
+        </form>
+
         {/* 状态栏 */}
         <div className="bg-white rounded-xl p-4 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 border border-gray-100 shadow-sm">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full ${backendOnline ? 'bg-green-500 animate-live-dot' : 'bg-amber-500'}`}></span>
               <span className="text-sm font-medium text-gray-700">
-                {backendOnline ? '深度抓取引擎运行中' : '展示模式（启动后端开启实时抓取）'}
+                {backendOnline ? '抓取引擎运行中' : '展示模式（启动后端开启实时抓取）'}
               </span>
             </div>
             <span className="text-xs text-gray-400">更新: {lastUpdate.toLocaleTimeString('zh-CN')}</span>
@@ -348,7 +391,7 @@ export default function NewsFeedSection() {
           <button onClick={handleRefresh} disabled={isRefreshing}
             className="flex items-center gap-2 px-4 py-2 bg-cupl-red text-white rounded-lg text-sm font-medium hover:bg-red-800 transition disabled:opacity-50">
             {isRefreshing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-            {crawling ? '正在深度抓取...' : isRefreshing ? '刷新中...' : '立即抓取最新内容'}
+            {crawling ? '后台抓取中...' : '默认抓取'}
           </button>
         </div>
 

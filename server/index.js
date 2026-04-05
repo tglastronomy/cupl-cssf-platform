@@ -3,7 +3,7 @@ import cors from 'cors'
 import initSqlJs from 'sql.js'
 import fs from 'fs'
 import cron from 'node-cron'
-import { crawlAll, crawlPlatform } from './crawlers/index.js'
+import { crawlAll, crawlPlatform, crawlByKeyword } from './crawlers/index.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
@@ -147,6 +147,21 @@ app.post('/api/crawl', (req, res) => {
 // API: 抓取状态
 app.get('/api/crawl-status', (req, res) => {
   res.json({ crawling })
+})
+
+// API: 按关键词搜索抓取
+app.post('/api/search-crawl', (req, res) => {
+  const { keyword } = req.body
+  if (!keyword || keyword.trim().length < 2) {
+    return res.status(400).json({ success: false, error: '关键词至少2个字' })
+  }
+  res.json({ success: true, message: `正在搜索抓取"${keyword}"相关内容...` })
+  ;(async () => {
+    try {
+      await crawlByKeyword(db, keyword.trim())
+      saveDb()
+    } catch (e) { console.error('Keyword crawl error:', e.message) }
+  })()
 })
 
 // 定时任务
