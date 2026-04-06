@@ -323,7 +323,7 @@ export default function NewsFeedSection() {
   const [activePlatform, setActivePlatform] = useState('all')
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdate, setLastUpdate] = useState(new Date())
-  const [newsItems, setNewsItems] = useState(mockNewsItems)
+  const [newsItems, setNewsItems] = useState(mockNewsItems.map((m, i) => ({ ...m, _uid: `mock_${m.id || i}` })))
   const [selectedItem, setSelectedItem] = useState(null)
   const [backendOnline, setBackendOnline] = useState(false)
   const [crawling, setCrawling] = useState(false)
@@ -335,51 +335,52 @@ export default function NewsFeedSection() {
     ? newsItems
     : newsItems.filter(item => item.platform === activePlatform)
 
-  // 尝试从后端加载数据，合并mock数据（保留后端没抓到的平台的mock内容）
+  // 始终请求全部数据，筛选交给前端
   const fetchFromBackend = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/articles?limit=500&platform=${activePlatform}`)
+      const res = await fetch(`${API_BASE}/api/articles?limit=500`)
       if (res.ok) {
         const data = await res.json()
         if (data.articles?.length > 0) {
-          // 找出后端已有数据的平台
-          const backendPlatforms = new Set(data.articles.map(a => a.platform))
-          // 保留后端没覆盖到的平台的mock数据
-          const missingMock = mockNewsItems.filter(m => !backendPlatforms.has(m.platform))
-          setNewsItems([...data.articles, ...missingMock])
+          const backendItems = data.articles.map((a, i) => ({ ...a, _uid: `api_${a.id}_${i}` }))
+          const backendPlatforms = new Set(backendItems.map(a => a.platform))
+          const missingMock = mockNewsItems
+            .filter(m => !backendPlatforms.has(m.platform))
+            .map((m, i) => ({ ...m, _uid: `mock_${m.platform}_${m.id}_${i}` }))
+          setNewsItems([...backendItems, ...missingMock])
           setBackendOnline(true)
           setLastUpdate(new Date())
           return true
         }
       }
-    } catch (e) { /* backend offline, use mock data */ }
+    } catch (e) { /* backend offline */ }
     setBackendOnline(false)
     return false
-  }, [activePlatform])
+  }, [])
 
-  // 启动时尝试连接后端
-  useEffect(() => { fetchFromBackend() }, [fetchFromBackend])
+  // 启动时连接后端
+  useEffect(() => { fetchFromBackend() }, [])
 
-  // 手动刷新：触发后端异步爬取，立即拉取已有数据
-  const handleRefresh = async () => {
+  // 手动刷新
+  const handleRefresh = () => {
     setIsRefreshing(true)
     setCrawling(true)
-    try {
-      // 触发后端异步爬取（立即返回）
-      fetch(`${API_BASE}/api/crawl`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(activePlatform !== 'all' ? { platform: activePlatform } : {})
-      }).catch(() => {})
-      // 立即拉取已有数据
-      await fetchFromBackend()
-      // 5秒后再拉一次，获取刚抓到的新数据
-      setTimeout(async () => {
-        await fetchFromBackend()
+    fetch(`${API_BASE}/api/crawl`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(activePlatform !== 'all' ? { platform: activePlatform } : {})
+    }).catch(() => {})
+    fetchFromBackend()
+    let count = 0
+    const poll = setInterval(() => {
+      fetchFromBackend()
+      count++
+      if (count >= 4) {
+        clearInterval(poll)
         setCrawling(false)
-      }, 5000)
-    } catch (e) {
-      setLastUpdate(new Date())
-    }
-    setIsRefreshing(false)
+        setIsRefreshing(false)
+        setSavedToast('抓取完成')
+        setTimeout(() => setSavedToast(''), 3000)
+      }
+    }, 2000)
   }
 
   // 关键词搜索抓取
@@ -485,23 +486,29 @@ export default function NewsFeedSection() {
             <button
               onClick={() => {
                 setCrawling(true)
+                // 触发抓取
                 fetch(`${API_BASE}/api/crawl`, {
                   method: 'POST', headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ platform: activePlatform })
                 }).catch(() => {})
-                // 每3秒轮询一次获取新数据，共轮询5次
-                let polls = 0
-                const poller = setInterval(async () => {
-                  await fetchFromBackend()
-                  polls++
-                  if (polls >= 5) { clearInterval(poller); setCrawling(false) }
-                }, 3000)
+                // 轮询获取结果
+                let count = 0
+                const poll = setInterval(() => {
+                  fetchFromBackend()
+                  count++
+                  if (count >= 5) {
+                    clearInterval(poll)
+                    setCrawling(false)
+                    setSavedToast('抓取完成')
+                    setTimeout(() => setSavedToast(''), 3000)
+                  }
+                }, 2000)
               }}
               disabled={crawling}
               className="px-4 py-1.5 text-sm text-cupl-red border border-cupl-red/30 rounded-lg hover:bg-red-50 transition disabled:opacity-50 flex items-center gap-1.5 mx-auto"
             >
               {crawling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-              {crawling ? '抓取中...' : `单独抓取${platforms.find(p => p.id === activePlatform)?.name || ''}最新内容`}
+              {crawling ? '正在抓取，请稍候...' : `单独抓取${platforms.find(p => p.id === activePlatform)?.name || ''}最新内容`}
             </button>
           </div>
         )}
@@ -509,7 +516,7 @@ export default function NewsFeedSection() {
         {/* 内容网格 */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((item, i) => (
-            <NewsCard key={item.id || i} item={item} onClick={setSelectedItem} />
+            <NewsCard key={item._uid || `${item.platform}_${i}`} item={item} onClick={setSelectedItem} />
           ))}
         </div>
 
