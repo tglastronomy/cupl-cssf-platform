@@ -78,7 +78,7 @@ function ImageGallery({ images }) {
 }
 
 // ==================== 完整文章阅读器 ====================
-function ArticleReader({ item, onClose }) {
+function ArticleReader({ item, onClose, setSavedToast }) {
   if (!item) return null
 
   useEffect(() => {
@@ -184,25 +184,17 @@ function ArticleReader({ item, onClose }) {
             {/* 操作按钮 */}
             <div className="flex flex-col gap-3">
               {item.platform === 'xiaohongshu' ? (
-                <>
-                  {/* 小红书专用：三种打开方式 */}
-                  <a href={`xhsdiscover://search/result?keyword=${encodeURIComponent(item.title.substring(0, 20))}`}
-                    className="flex items-center justify-center gap-2 px-6 py-3 bg-[#FE2C55] text-white font-medium rounded-xl hover:bg-[#e0264d] transition">
-                    <ExternalLink className="w-4 h-4" />
-                    在小红书App中打开（推荐）
-                  </a>
-                  <div className="flex gap-3">
-                    <a href={`https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(item.title.substring(0, 20))}&source=web_search_result_notes`}
-                      target="_blank" rel="noopener noreferrer"
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition text-sm">
-                      网页版搜索
-                    </a>
-                    <button onClick={() => { navigator.clipboard?.writeText(item.title); alert('标题已复制，可粘贴到小红书App搜索') }}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition text-sm">
-                      复制标题去搜索
-                    </button>
-                  </div>
-                </>
+                <button
+                  onClick={() => {
+                    const kw = item.title.replace(/[｜|#\[\]]/g, ' ').substring(0, 25).trim()
+                    navigator.clipboard?.writeText(kw)
+                    setSavedToast('关键词已复制到剪贴板，请打开小红书App粘贴搜索')
+                    setTimeout(() => setSavedToast(''), 3000)
+                  }}
+                  className="flex items-center justify-center gap-2 px-6 py-3 bg-[#FE2C55] text-white font-medium rounded-xl hover:bg-[#e0264d] transition">
+                  <ExternalLink className="w-4 h-4" />
+                  复制关键词，去小红书App搜索
+                </button>
               ) : (
                 <a href={item.url} target="_blank" rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 px-6 py-3 bg-cupl-red text-white font-medium rounded-xl hover:bg-red-800 transition"
@@ -211,8 +203,27 @@ function ArticleReader({ item, onClose }) {
                   前往{getPlatformName(item.platform)}查看原帖
                 </a>
               )}
-              <button className="flex items-center justify-center gap-2 px-6 py-3 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition">
-                <Bookmark className="w-4 h-4" />收藏
+              <button
+                onClick={() => {
+                  const saved = JSON.parse(localStorage.getItem('cupl_favorites') || '[]')
+                  const exists = saved.some(s => s.title === item.title)
+                  if (exists) {
+                    localStorage.setItem('cupl_favorites', JSON.stringify(saved.filter(s => s.title !== item.title)))
+                    setSavedToast('已取消收藏')
+                  } else {
+                    saved.unshift({ title: item.title, platform: item.platform, summary: item.summary, url: item.url, savedAt: new Date().toISOString() })
+                    localStorage.setItem('cupl_favorites', JSON.stringify(saved.slice(0, 100)))
+                    setSavedToast('已收藏')
+                  }
+                  setTimeout(() => setSavedToast(''), 2000)
+                }}
+                className={`flex items-center justify-center gap-2 px-6 py-3 border font-medium rounded-xl transition ${
+                  JSON.parse(localStorage.getItem('cupl_favorites') || '[]').some(s => s.title === item.title)
+                    ? 'border-cupl-gold bg-cupl-gold/10 text-cupl-gold'
+                    : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                }`}>
+                <Bookmark className="w-4 h-4" />
+                {JSON.parse(localStorage.getItem('cupl_favorites') || '[]').some(s => s.title === item.title) ? '已收藏' : '收藏'}
               </button>
             </div>
           </div>
@@ -287,6 +298,7 @@ export default function NewsFeedSection() {
   const [crawling, setCrawling] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searching, setSearching] = useState(false)
+  const [savedToast, setSavedToast] = useState('')
 
   const filtered = activePlatform === 'all'
     ? newsItems
@@ -500,7 +512,14 @@ export default function NewsFeedSection() {
       </div>
 
       {/* 文章阅读器 */}
-      {selectedItem && <ArticleReader item={selectedItem} onClose={() => setSelectedItem(null)} />}
+      {selectedItem && <ArticleReader item={selectedItem} onClose={() => setSelectedItem(null)} setSavedToast={setSavedToast} />}
+
+      {/* Toast 提示 */}
+      {savedToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] bg-gray-900 text-white px-6 py-3 rounded-xl shadow-lg text-sm animate-fade-in-up">
+          {savedToast}
+        </div>
+      )}
     </section>
   )
 }
