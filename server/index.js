@@ -3,6 +3,7 @@ import cors from 'cors'
 import initSqlJs from 'sql.js'
 import fs from 'fs'
 import cron from 'node-cron'
+import axios from 'axios'
 import { crawlAll, crawlPlatform, crawlByKeyword } from './crawlers/index.js'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -127,18 +128,33 @@ app.get('/api/stats', (req, res) => {
   })
 })
 
-// API: 触发抓取（异步执行，立即返回）
+// 触发GitHub Actions爬虫
+const GH_TOKEN = process.env.GH_TOKEN || ''
+async function triggerGitHubCrawl() {
+  try {
+    await axios.post(
+      'https://api.github.com/repos/tglastronomy/cupl-cssf-platform/actions/workflows/crawl-xhs.yml/dispatches',
+      { ref: 'main' },
+      { headers: { 'Authorization': `Bearer ${GH_TOKEN}`, 'Accept': 'application/vnd.github.v3+json' }, timeout: 10000 }
+    )
+    console.log('[GitHub Actions] 小红书爬虫已触发')
+  } catch (e) { console.log('[GitHub Actions] 触发失败:', e.message) }
+}
+
+// API: 触发抓取（Render爬其他平台 + GitHub Actions爬小红书）
 let crawling = false
 app.post('/api/crawl', (req, res) => {
   if (crawling) return res.json({ success: true, message: '抓取任务已在运行中' })
   const { platform } = req.body
   crawling = true
-  res.json({ success: true, message: `已开始${platform ? platform : '全平台'}抓取，请稍后刷新查看` })
-  // 后台异步执行
+  res.json({ success: true, message: `已开始抓取` })
   ;(async () => {
     try {
-      if (platform) await crawlPlatform(db, platform)
-      else await crawlAll(db)
+      // 同时触发GitHub Actions抓小红书
+      triggerGitHubCrawl()
+      // Render抓其他平台
+      if (platform && platform !== 'xiaohongshu') await crawlPlatform(db, platform)
+      else if (!platform) await crawlAll(db)
       saveDb()
     } catch (e) { console.error('Crawl error:', e.message) }
     crawling = false
