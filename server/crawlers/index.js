@@ -113,19 +113,10 @@ async function crawlZhihu(db) {
           if (title.length < 5) continue
           const excerpt = (obj.excerpt || obj.content || '').replace(/<[^>]+>/g, '').substring(0, 500)
           const postUrl = obj.url || `https://www.zhihu.com/question/${obj.question?.id}`
-
-          // 深度抓取：获取回答全文
-          let fullContent = excerpt
-          let images = []
-          if (postUrl.includes('zhihu.com')) {
-            const deep = await deepScrapeUrl(postUrl)
-            if (deep.text.length > fullContent.length) fullContent = deep.text
-            images = deep.images
-          }
-
+          // 直接用API摘要入库，不逐条深度抓取（大幅提速）
           const added = insertArticle(db, {
             platform: 'zhihu', title, summary: excerpt.substring(0, 200),
-            full_content: fullContent, images,
+            full_content: excerpt, images: [],
             author: obj.author?.name || '匿名', author_avatar: obj.author?.avatar_url || '',
             url: postUrl, tags: ['知乎'],
             likes: obj.voteup_count || 0, comments: obj.comment_count || 0,
@@ -135,7 +126,7 @@ async function crawlZhihu(db) {
         }
       }
     } catch (e) { /* silent */ }
-    await delay(600)
+    await delay(200)
   }
   logCrawl(db, 'zhihu', 'success', n, `Deep crawl: ${n} articles with full content`)
   return n
@@ -183,7 +174,7 @@ async function crawlBilibili(db) {
         }
       }
     } catch (e) { /* silent */ }
-    await delay(400)
+    await delay(150)
     } // end page loop
   }
   logCrawl(db, 'bilibili', 'success', n, `${n} videos with covers`)
@@ -266,154 +257,127 @@ async function crawlXiaohongshu(db) {
     '中国政法大学 校园', '法大 在读 感受',
   ]
 
-  // 通道0 (最优先): 小红书API直接搜索，获取真实笔记ID
-  console.log('  [xiaohongshu] 尝试API直接搜索...')
+  // 所有通道并发执行（大幅提速）
+  console.log('  [xiaohongshu] 4通道并发抓取...')
   const cookie = await getXhsCookie()
-  for (const term of terms.slice(0, 15)) {
-    const notes = await searchXhsNotes(term, cookie)
-    for (const note of notes) {
-      const added = insertArticle(db, {
-        platform: 'xiaohongshu',
-        title: note.title || term,
-        summary: note.desc?.substring(0, 200) || '',
-        full_content: note.desc || '',
-        images: note.images,
-        author: note.author,
-        // 真实的笔记链接！手机上会直接唤起小红书App
-        url: `https://www.xiaohongshu.com/explore/${note.noteId}`,
-        tags: ['小红书', '考研'],
-        likes: note.likes, comments: 0,
-      })
-      if (added) n++
-    }
-    if (notes.length > 0) console.log(`    "${term}": ${notes.length} notes`)
-    await delay(600)
-  }
 
-  // 如果API获取到了足够多的内容，跳过搜索引擎通道
-  if (n >= 30) {
-    logCrawl(db, 'xiaohongshu', 'success', n, `API direct: ${n} notes with real URLs`)
-    return n
+  // 通道0: API（并发5个词一组）
+  const apiChunks = []
+  for (let i = 0; i < Math.min(terms.length, 15); i += 5) {
+    apiChunks.push(terms.slice(i, i + 5))
   }
+  for (const chunk of apiChunks) {
+    const results = await Promise.all(chunk.map(term => searchXhsNotes(term, cookie).catch(() => [])))
+    results.forEach((notes, idx) => {
+      for (const note of notes) {
+        if (insertArticle(db, {
+          platform: 'xiaohongshu', title: note.title || chunk[idx],
+          summary: note.desc?.substring(0, 200) || '', full_content: note.desc || '',
+          images: note.images, author: note.author,
+          url: `https://www.xiaohongshu.com/explore/${note.noteId}`,
+          tags: ['小红书', '考研'], likes: note.likes, comments: 0,
+        })) n++
+      }
+    })
+  }
+  if (n >= 30) { logCrawl(db, 'xiaohongshu', 'success', n, `API: ${n}`); return n }
 
-  // 通道1: Google 搜索（对小红书索引最好）（API不够时补充）
-  for (const term of terms) {
-    try {
-      const res = await axios.get('https://www.google.com/search', {
+  // 通道1-4: 搜索引擎全部并发
+  const engineJobs = []
+
+  // Google 并发
+  for (const term of terms.slice(0, 10)) {
+    engineJobs.push(
+      axios.get('https://www.google.com/search', {
         params: { q: `site:xiaohongshu.com ${term}`, num: 50 },
-        headers: { 'User-Agent': UA, 'Accept-Language': 'zh-CN,zh;q=0.9' },
-        timeout: 12000,
-      })
-      const $ = cheerio.load(res.data)
-      $('div.g, div[data-hveid]').each((_, el) => {
-        const a = $(el).find('a[href*="xiaohongshu.com"]').first()
-        const href = a.attr('href')
-        const title = $(el).find('h3').text().trim() || a.text().trim()
-        const snippet = $(el).find('.VwiC3b, .IsZvec, span.aCOpRe').text().trim()
-        if (title && href?.includes('xiaohongshu.com')) {
-          // 保留真实的小红书帖子URL（含/explore/或/discovery/item/的是真实帖子链接）
-          insertArticle(db, {
-            platform: 'xiaohongshu', title,
-            summary: snippet.substring(0, 300),
-            full_content: snippet,
-            images: [], author: '小红书用户',
-            url: href,
-            tags: ['小红书', '考研'], likes: 0, comments: 0,
-          })
-          n++
-        }
-      })
-    } catch (e) { /* silent */ }
-    await delay(500)
+        headers: { 'User-Agent': UA, 'Accept-Language': 'zh-CN' }, timeout: 8000,
+      }).then(res => {
+        const $ = cheerio.load(res.data)
+        $('div.g, div[data-hveid]').each((_, el) => {
+          const href = $(el).find('a[href*="xiaohongshu.com"]').first().attr('href')
+          const title = $(el).find('h3').text().trim()
+          const snippet = $(el).find('.VwiC3b, .IsZvec').text().trim()
+          if (title && href?.includes('xiaohongshu.com')) {
+            if (insertArticle(db, { platform: 'xiaohongshu', title, summary: snippet.substring(0, 300),
+              full_content: snippet, images: [], author: '小红书用户', url: href,
+              tags: ['小红书'], likes: 0, comments: 0 })) n++
+          }
+        })
+      }).catch(() => {})
+    )
   }
 
-  // 通道2: Bing 搜索
-  for (const term of terms) {
-    try {
-      const res = await axios.get('https://www.bing.com/search', {
+  // Bing 并发
+  for (const term of terms.slice(0, 10)) {
+    engineJobs.push(
+      axios.get('https://www.bing.com/search', {
         params: { q: `site:xiaohongshu.com ${term}`, count: 50 },
-        headers: { 'User-Agent': UA },
-        timeout: 12000,
-      })
-      const $ = cheerio.load(res.data)
-      $('li.b_algo').each((_, el) => {
-        const title = $(el).find('h2 a').text().trim()
-        const href = $(el).find('h2 a').attr('href')
-        const snippet = $(el).find('.b_caption p').text().trim()
-        if (title && href?.includes('xiaohongshu.com')) {
-          insertArticle(db, {
-            platform: 'xiaohongshu', title,
-            summary: snippet.substring(0, 300),
-            full_content: snippet,
-            images: [], author: '小红书用户',
-            url: href,
-            tags: ['小红书', '考研'], likes: 0, comments: 0,
-          })
-          n++
-        }
-      })
-    } catch (e) { /* silent */ }
-    await delay(400)
+        headers: { 'User-Agent': UA }, timeout: 8000,
+      }).then(res => {
+        const $ = cheerio.load(res.data)
+        $('li.b_algo').each((_, el) => {
+          const title = $(el).find('h2 a').text().trim()
+          const href = $(el).find('h2 a').attr('href')
+          const snippet = $(el).find('.b_caption p').text().trim()
+          if (title && href?.includes('xiaohongshu.com')) {
+            if (insertArticle(db, { platform: 'xiaohongshu', title, summary: snippet.substring(0, 300),
+              full_content: snippet, images: [], author: '小红书用户', url: href,
+              tags: ['小红书'], likes: 0, comments: 0 })) n++
+          }
+        })
+      }).catch(() => {})
+    )
   }
 
-  // 通道3: 搜狗搜索（国内搜索引擎，对小红书友好）
-  for (const term of terms.slice(0, 15)) {
-    try {
-      const res = await axios.get('https://www.sogou.com/web', {
+  // 搜狗 并发
+  for (const term of terms.slice(0, 8)) {
+    engineJobs.push(
+      axios.get('https://www.sogou.com/web', {
         params: { query: `小红书 ${term}`, num: 50 },
-        headers: { 'User-Agent': UA },
-        timeout: 12000,
-      })
-      const $ = cheerio.load(res.data)
-      $('div.vrwrap, div.rb, div.results .result').each((_, el) => {
-        const title = $(el).find('h3 a, a.title').text().trim()
-        const href = $(el).find('h3 a, a.title').attr('href')
-        const snippet = $(el).find('.str_info, .ft, .space-txt').text().trim()
-        if (title && (title.includes('小红书') || snippet.includes('小红书') || href?.includes('xiaohongshu'))) {
-          insertArticle(db, {
-            platform: 'xiaohongshu', title,
-            summary: snippet.substring(0, 300),
-            full_content: snippet,
-            images: [], author: '小红书用户',
-            url: href?.includes('xiaohongshu.com') ? href : (href || '#'),
-            tags: ['小红书', '考研'], likes: 0, comments: 0,
-          })
-          n++
-        }
-      })
-    } catch (e) { /* silent */ }
-    await delay(300)
+        headers: { 'User-Agent': UA }, timeout: 8000,
+      }).then(res => {
+        const $ = cheerio.load(res.data)
+        $('div.vrwrap, div.rb').each((_, el) => {
+          const title = $(el).find('h3 a').text().trim()
+          const href = $(el).find('h3 a').attr('href')
+          const snippet = $(el).find('.str_info, .ft').text().trim()
+          if (title && (title.includes('小红书') || href?.includes('xiaohongshu'))) {
+            if (insertArticle(db, { platform: 'xiaohongshu', title, summary: snippet.substring(0, 300),
+              full_content: snippet, images: [], author: '小红书用户',
+              url: href?.includes('xiaohongshu.com') ? href : (href || '#'),
+              tags: ['小红书'], likes: 0, comments: 0 })) n++
+          }
+        })
+      }).catch(() => {})
+    )
   }
 
-  // 通道4: 百度搜索
-  for (const term of terms.slice(0, 15)) {
-    try {
-      const res = await axios.get('https://www.baidu.com/s', {
+  // 百度 并发
+  for (const term of terms.slice(0, 8)) {
+    engineJobs.push(
+      axios.get('https://www.baidu.com/s', {
         params: { wd: `小红书 ${term}`, rn: 50 },
-        headers: { 'User-Agent': UA },
-        timeout: 12000,
-      })
-      const $ = cheerio.load(res.data)
-      $('div.result, div.c-container').each((_, el) => {
-        const title = $(el).find('h3 a').text().trim()
-        const href = $(el).find('h3 a').attr('href')
-        const snippet = $(el).find('.c-abstract, .content-right_2s-H4').text().trim()
-        if (title && href && (title.includes('小红书') || snippet.includes('小红书'))) {
-          insertArticle(db, {
-            platform: 'xiaohongshu', title, summary: snippet.substring(0, 300),
-            full_content: snippet, images: [],
-            author: '小红书用户',
-            url: href,
-            tags: ['小红书'], likes: 0, comments: 0,
-          })
-          n++
-        }
-      })
-    } catch (e) { /* silent */ }
-    await delay(300)
+        headers: { 'User-Agent': UA }, timeout: 8000,
+      }).then(res => {
+        const $ = cheerio.load(res.data)
+        $('div.result, div.c-container').each((_, el) => {
+          const title = $(el).find('h3 a').text().trim()
+          const href = $(el).find('h3 a').attr('href')
+          const snippet = $(el).find('.c-abstract').text().trim()
+          if (title && href && (title.includes('小红书') || snippet.includes('小红书'))) {
+            if (insertArticle(db, { platform: 'xiaohongshu', title, summary: snippet.substring(0, 300),
+              full_content: snippet, images: [], author: '小红书用户', url: href,
+              tags: ['小红书'], likes: 0, comments: 0 })) n++
+          }
+        })
+      }).catch(() => {})
+    )
   }
 
-  logCrawl(db, 'xiaohongshu', 'success', n, `Deep crawl: ${n} posts with content+images`)
+  // 所有搜索引擎通道并发执行
+  await Promise.all(engineJobs)
+
+  logCrawl(db, 'xiaohongshu', 'success', n, `Concurrent crawl: ${n} posts`)
   return n
 }
 
@@ -456,10 +420,10 @@ async function crawlWechat(db) {
           tags: ['微信公众号'], likes: 0, comments: 0,
         })
         if (added) n++
-        await delay(400)
+        await delay(100)
       }
     } catch (e) { /* silent */ }
-    await delay(300)
+    await delay(100)
   }
   logCrawl(db, 'wechat', 'success', n, `Deep crawl: ${n} articles`)
   return n
@@ -503,7 +467,7 @@ async function crawlTieba(db) {
           tags: ['贴吧', bar], likes: 0, comments: 0,
         })
         if (added) n++
-        await delay(300)
+        await delay(100)
       }
     } catch (e) { /* silent */ }
   }
@@ -547,7 +511,7 @@ async function crawlWeibo(db) {
         }
       }
     } catch (e) { /* silent */ }
-    await delay(500)
+    await delay(150)
   }
   logCrawl(db, 'weibo', 'success', n, `${n} weibos with images`)
   return n
@@ -586,7 +550,7 @@ async function crawlKaoyan(db) {
           tags: ['考研帮'], likes: 0, comments: 0,
         })
         if (added) n++
-        await delay(300)
+        await delay(100)
       }
     } catch (e) { /* silent */ }
   }
@@ -623,7 +587,7 @@ async function crawlDouyin(db) {
         }
       })
     } catch (e) { /* silent */ }
-    await delay(400)
+    await delay(100)
   }
   logCrawl(db, 'douyin', 'success', n, `${n} videos`)
   return n
@@ -645,7 +609,7 @@ export async function crawlAll(db) {
   for (const { name, fn } of crawlers) {
     try { results[name] = await fn(db); console.log(`  [${name}] ${results[name]} items`) }
     catch (e) { results[name] = 0; logCrawl(db, name, 'error', 0, e.message) }
-    await delay(1000)
+    await delay(200)
   }
   const total = Object.values(results).reduce((a, b) => a + b, 0)
   console.log(`[${new Date().toISOString()}] === 完成: ${total} items ===`)
