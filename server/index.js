@@ -144,6 +144,28 @@ app.post('/api/crawl', (req, res) => {
   })()
 })
 
+// API: 接收本地爬虫上传的文章
+app.post('/api/upload-articles', (req, res) => {
+  const { articles } = req.body
+  if (!articles || !Array.isArray(articles)) return res.status(400).json({ error: 'articles array required' })
+  let added = 0
+  for (const a of articles) {
+    try {
+      db.run(
+        `INSERT OR IGNORE INTO articles (platform, title, summary, full_content, images, author, author_avatar, url, tags, likes, comments, published_at, category)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [a.platform || 'xiaohongshu', a.title || '', a.summary || '', a.full_content || '', JSON.stringify(a.images || []),
+         a.author || '小红书用户', a.author_avatar || '', a.url || '',
+         JSON.stringify(a.tags || []), a.likes || 0, a.comments || 0,
+         a.published_at || new Date().toISOString(), a.category || 'general']
+      )
+      if (db.getRowsModified() > 0) added++
+    } catch (e) { /* skip duplicates */ }
+  }
+  saveDb()
+  res.json({ success: true, added, total: articles.length })
+})
+
 // API: 抓取状态
 app.get('/api/crawl-status', (req, res) => {
   res.json({ crawling })
