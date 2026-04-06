@@ -18,13 +18,13 @@ export default function Header({ activeSection, onNavigate }) {
   const [searchQuery, setSearchQuery] = useState('')
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-black/[0.04]">
       {/* Top bar */}
-      <div className="bg-cupl-red text-white text-xs py-1">
+      <div className="bg-gradient-to-r from-cupl-dark to-cupl-navy text-white text-xs py-1.5">
         <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <span className="inline-block w-2 h-2 bg-green-400 rounded-full animate-live-dot"></span>
-            <span>全网实时监控中 | 已接入 8 大平台 | 24小时不间断更新</span>
+            <span className="inline-block w-1.5 h-1.5 bg-emerald-400 rounded-full animate-live-dot"></span>
+            <span className="text-white/80">全网实时监控中 · 8 大平台 · 24小时不间断</span>
           </div>
           <div className="hidden md:flex items-center gap-4">
             <a href="https://yjsy.cupl.edu.cn/" target="_blank" rel="noopener" className="hover:text-cupl-gold transition">研究生院官网</a>
@@ -73,9 +73,12 @@ export default function Header({ activeSection, onNavigate }) {
             >
               <Search className="w-5 h-5 text-gray-600" />
             </button>
-            <button className="relative p-2 rounded-lg hover:bg-gray-100 transition">
+            <button
+              onClick={() => onNavigate('news')}
+              className="relative p-2 rounded-lg hover:bg-gray-100 transition"
+              title="查看最新资讯"
+            >
               <Bell className="w-5 h-5 text-gray-600" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
             </button>
             <button
               onClick={() => setMobileOpen(!mobileOpen)}

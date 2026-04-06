@@ -75,7 +75,7 @@ app.use(express.json())
 
 // API: 文章列表（含完整内容）
 app.get('/api/articles', (req, res) => {
-  const { platform, category, page = 1, limit = 100, search } = req.query
+  const { platform, category, page = 1, limit = 500, search } = req.query
   const offset = (page - 1) * limit
   let where = '1=1'
   const params = []

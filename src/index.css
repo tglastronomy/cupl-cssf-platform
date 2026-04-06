@@ -1,103 +1,109 @@
 @import "tailwindcss";
 
 @theme {
-  --color-cupl-red: #8B0000;
-  --color-cupl-gold: #C4972F;
-  --color-cupl-dark: #1a1a2e;
-  --color-cupl-navy: #16213e;
-  --color-cupl-blue: #0f3460;
-  --color-cupl-light: #f8f9fa;
+  --color-cupl-red: #7A1F1F;
+  --color-cupl-gold: #D4A853;
+  --color-cupl-dark: #0f0f1a;
+  --color-cupl-navy: #131328;
+  --color-cupl-blue: #1a1a3e;
+  --color-cupl-light: #fafafa;
   --color-cupl-gray: #6c757d;
-  --font-sans: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --font-sans: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', -apple-system, sans-serif;
 }
 
 html {
   scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   margin: 0;
   font-family: var(--font-sans);
-  background: #f5f5f7;
+  background: #f7f7f8;
+  color: #1a1a1a;
+  -webkit-font-smoothing: antialiased;
 }
 
 #root {
   min-height: 100vh;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-}
-::-webkit-scrollbar-thumb {
-  background: #c4972f;
-  border-radius: 3px;
-}
+/* Elegant scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d4a853; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #b8912e; }
 
 /* Animations */
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
 }
 @keyframes slideInLeft {
-  from { opacity: 0; transform: translateX(-30px); }
+  from { opacity: 0; transform: translateX(-20px); }
   to { opacity: 1; transform: translateX(0); }
 }
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 5px rgba(196, 151, 47, 0.3); }
-  50% { box-shadow: 0 0 20px rgba(196, 151, 47, 0.6); }
-}
-@keyframes ticker {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 @keyframes live-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
 }
 
-.animate-fade-in-up {
-  animation: fadeInUp 0.6s ease-out forwards;
-}
-.animate-slide-in-left {
-  animation: slideInLeft 0.5s ease-out forwards;
-}
-.animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
-}
-.animate-ticker {
-  animation: ticker 30s linear infinite;
-}
-.animate-live-dot {
-  animation: live-dot 1.5s ease-in-out infinite;
+.animate-fade-in-up { animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-slide-in-left { animation: slideInLeft 0.4s ease-out forwards; }
+.animate-live-dot { animation: live-dot 2s ease-in-out infinite; }
+.animate-float { animation: float 3s ease-in-out infinite; }
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
 }
 
-/* Card hover effect */
+/* Card hover — glass morphism */
 .card-hover {
-  transition: all 0.3s ease;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(0,0,0,0.04);
 }
 .card-hover:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+  transform: translateY(-3px);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
 }
 
-/* Platform badge colors */
-.badge-xiaohongshu { background: #FE2C55; color: white; }
-.badge-bilibili { background: #00A1D6; color: white; }
-.badge-zhihu { background: #0066FF; color: white; }
-.badge-tieba { background: #4E6EF2; color: white; }
-.badge-wechat { background: #07C160; color: white; }
-.badge-weibo { background: #FF8200; color: white; }
-.badge-kaoyan { background: #E74C3C; color: white; }
-.badge-douyin { background: #000000; color: white; }
+/* Glass card */
+.glass {
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.3);
+}
 
-/* Gradient text */
+/* Platform badges — pill style */
+.badge-xiaohongshu { background: linear-gradient(135deg, #FE2C55, #FF5C7C); color: white; }
+.badge-bilibili { background: linear-gradient(135deg, #00A1D6, #23C9FF); color: white; }
+.badge-zhihu { background: linear-gradient(135deg, #0066FF, #4D94FF); color: white; }
+.badge-tieba { background: linear-gradient(135deg, #4E6EF2, #7B93FF); color: white; }
+.badge-wechat { background: linear-gradient(135deg, #07C160, #2EE87A); color: white; }
+.badge-weibo { background: linear-gradient(135deg, #FF8200, #FFB347); color: white; }
+.badge-kaoyan { background: linear-gradient(135deg, #E74C3C, #FF7675); color: white; }
+.badge-douyin { background: linear-gradient(135deg, #1a1a1a, #444); color: white; }
+
+/* Gradient text — premium feel */
 .text-gradient {
-  background: linear-gradient(135deg, #8B0000, #C4972F);
+  background: linear-gradient(135deg, #7A1F1F, #D4A853);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* Section divider */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,0,0,0.06), transparent);
 }
