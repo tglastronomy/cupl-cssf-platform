@@ -16,10 +16,10 @@ export default function AdmissionSection() {
         <div className="text-center mb-12">
           <span className="inline-block px-3 py-1 bg-red-50 text-cupl-red text-sm font-medium rounded-full mb-4">招生信息</span>
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            2026年硕士研究生 <span className="text-cupl-red">招生专业</span>
+            2027考研 <span className="text-cupl-red">招生专业</span>
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            刑事司法学院设有刑法学、诉讼法学两个硕士点，均为国家重点学科
+            以下为2026年招生章程（最新已发布版），2027年章程预计2026年10月发布
           </p>
         </div>
 
@@ -27,7 +27,7 @@ export default function AdmissionSection() {
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-8 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
           <div className="text-sm text-amber-800">
-            <strong>注意：</strong>2026年初试科目可能有调整，请密切关注
+            <strong>注意：</strong>2027年招生章程预计2026年10月发布，届时初试科目可能有调整，请密切关注
             <a href="https://yjsy.cupl.edu.cn/yjszs.htm" target="_blank" rel="noopener" className="text-cupl-red underline ml-1">
               中国政法大学研究生院官网
             </a>

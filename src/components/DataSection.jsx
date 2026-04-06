@@ -130,7 +130,7 @@ export default function DataSection() {
         {activeTab === 'admission' && (
           <div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-              {admissionStats.filter(s => s.year === 2025).map((stat, i) => (
+              {admissionStats.filter(s => s.year === 2026).map((stat, i) => (
                 <div key={i} className="bg-gradient-to-br from-cupl-red to-cupl-dark rounded-xl p-6 text-white">
                   <h4 className="font-bold text-lg mb-4">{stat.program} · {stat.year}</h4>
                   <div className="grid grid-cols-2 gap-4">

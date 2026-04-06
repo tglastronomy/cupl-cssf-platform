@@ -1,7 +1,7 @@
 import { TrendingUp, Users, BookOpen, Clock, ArrowRight, Zap } from 'lucide-react'
 
 const stats = [
-  { icon: TrendingUp, value: '370', label: '2025刑法学院线', color: 'text-red-400' },
+  { icon: TrendingUp, value: '370', label: '2026刑法学院线', color: 'text-red-400' },
   { icon: Users, value: '64', label: '专职教师', color: 'text-blue-400' },
   { icon: BookOpen, value: '2', label: '国家重点学科', color: 'text-amber-400' },
   { icon: Clock, value: '24h', label: '全网实时监控', color: 'text-emerald-400' },
@@ -40,10 +40,10 @@ export default function HeroSection({ onNavigate }) {
             综合信息平台
           </p>
 
-          <p className="text-lg text-white/80 max-w-2xl mx-auto mb-10 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
-            汇聚招生数据 · 导师信息 · 备考资源 · 上岸经验 · 全网实时资讯
+          <p className="text-lg text-white/70 max-w-2xl mx-auto mb-10 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+            2027考研（2026年12月）备考必备
             <br />
-            覆盖小红书、B站、知乎、贴吧、微信公众号等全平台内容
+            <span className="text-white/50 text-sm">汇聚招生数据 · 导师信息 · 备考资源 · 上岸经验 · 全网实时资讯</span>
           </p>
 
           {/* CTA Buttons */}

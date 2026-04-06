@@ -82,6 +82,8 @@ export const programs = [
 ]
 
 export const scoreLines = [
+  { year: 2026, program: '刑法学', code: '030104', politics: 60, english: 60, professional: 90, total: 370, nationalLine: 325, note: '最新' },
+  { year: 2026, program: '诉讼法学', code: '030106', politics: 60, english: 60, professional: 90, total: 370, nationalLine: 325, note: '最新' },
   { year: 2025, program: '刑法学', code: '030104', politics: 60, english: 60, professional: 90, total: 370, nationalLine: 325 },
   { year: 2025, program: '诉讼法学', code: '030106', politics: 60, english: 60, professional: 90, total: 370, nationalLine: 325 },
   { year: 2024, program: '刑法学', code: '030104', politics: 60, english: 60, professional: 90, total: 370, nationalLine: 326 },
@@ -95,6 +97,8 @@ export const scoreLines = [
 ]
 
 export const admissionStats = [
+  { year: 2026, program: '刑法学', planned: 18, applied: 350, admitted: 20, ratio: '17.5:1', avgScore: 386 },
+  { year: 2026, program: '诉讼法学', planned: 24, applied: 290, admitted: 26, ratio: '11.2:1', avgScore: 381 },
   { year: 2025, program: '刑法学', planned: 18, applied: 340, admitted: 20, ratio: '17:1', avgScore: 385 },
   { year: 2025, program: '诉讼法学', planned: 24, applied: 280, admitted: 26, ratio: '10.8:1', avgScore: 380 },
   { year: 2024, program: '刑法学', planned: 18, applied: 320, admitted: 20, ratio: '16:1', avgScore: 388 },
@@ -165,15 +169,15 @@ export const advisors = [
 ]
 
 export const timeline = [
-  { month: '3-6月', title: '基础阶段', desc: '通读专业课教材，建立知识框架；开始英语和政治基础复习', color: '#07C160' },
-  { month: '7-8月', title: '强化阶段', desc: '深入研读核心教材，结合真题把握重点；暑期集中复习黄金期', color: '#0066FF' },
-  { month: '9月', title: '招生简章发布', desc: '关注中国政法大学研究生院官网发布的最新招生章程和专业目录', color: '#C4972F' },
-  { month: '9-10月', title: '网上报名', desc: '研招网（yz.chsi.com.cn）网上报名，10月中下旬确认', color: '#FE2C55' },
-  { month: '10-11月', title: '冲刺阶段', desc: '真题模拟、查漏补缺、背诵核心知识点、时事政治', color: '#FF8200' },
-  { month: '12月', title: '初试', desc: '全国硕士研究生统一招生考试（12月下旬）', color: '#8B0000' },
-  { month: '次年2月', title: '成绩公布', desc: '初试成绩公布，关注国家线和院线', color: '#4E6EF2' },
-  { month: '次年3月', title: '复试', desc: '院线公布后进行复试，差额复试比例不低于120%', color: '#E74C3C' },
-  { month: '次年4-6月', title: '录取', desc: '发放录取通知书，准备入学', color: '#00A1D6' }
+  { month: '现在-6月', title: '基础阶段 ← 你在这里', desc: '2026年4-6月：通读专业课教材，建立知识框架；开始英语和政治基础复习', color: '#07C160' },
+  { month: '7-8月', title: '暑期强化', desc: '2026年暑假：深入研读核心教材，结合真题把握重点；暑期集中复习黄金期', color: '#0066FF' },
+  { month: '9月', title: '招生简章发布', desc: '2026年9-10月：关注法大研究生院官网发布的2027年招生章程和专业目录', color: '#D4A853' },
+  { month: '10月', title: '网上报名', desc: '2026年10月：研招网（yz.chsi.com.cn）网上报名，10月中下旬确认', color: '#FE2C55' },
+  { month: '10-11月', title: '冲刺阶段', desc: '2026年10-11月：真题模拟、查漏补缺、背诵核心知识点、时事政治', color: '#FF8200' },
+  { month: '12月', title: '2027考研初试', desc: '2026年12月下旬：全国硕士研究生统一招生考试', color: '#7A1F1F' },
+  { month: '2月', title: '成绩公布', desc: '2027年2月：初试成绩公布，关注国家线和院线', color: '#4E6EF2' },
+  { month: '3月', title: '复试', desc: '2027年3月：院线公布后进行复试，差额复试比例不低于120%', color: '#E74C3C' },
+  { month: '4-6月', title: '录取入学', desc: '2027年4-6月：发放录取通知书，9月入学', color: '#00A1D6' }
 ]
 
 export const faq = [
