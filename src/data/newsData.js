@@ -67,7 +67,7 @@ export const mockNewsItems = [
     author: '法学小透明', time: '最近',
     likes: 2341, comments: 156,
     tags: ['考研经验', '刑法学', '上岸'],
-    url: 'https://m.baidu.com/s?word=小红书+法大考研+刑法学+上岸经验'
+    url: '#'
   },
   {
     id: 7, platform: 'xiaohongshu',
@@ -77,7 +77,7 @@ export const mockNewsItems = [
     author: '刑诉上岸er', time: '最近',
     likes: 3456, comments: 278,
     tags: ['复试经验', '面试真题', '刑事诉讼法'],
-    url: 'https://m.baidu.com/s?word=小红书+法大+复试+刑事诉讼法+经验'
+    url: '#'
   },
   {
     id: 8, platform: 'xiaohongshu',
@@ -87,7 +87,7 @@ export const mockNewsItems = [
     author: '背书达人', time: '最近',
     likes: 5678, comments: 432,
     tags: ['背诵框架', '法理学', '宪法学', '708'],
-    url: 'https://m.baidu.com/s?word=小红书+法大考研+708+背诵框架'
+    url: '#'
   },
   {
     id: 9, platform: 'xiaohongshu',
@@ -97,7 +97,7 @@ export const mockNewsItems = [
     author: '法大在读小姐姐', time: '最近',
     likes: 4230, comments: 312,
     tags: ['读研体验', '日常分享', '校园生活'],
-    url: 'https://m.baidu.com/s?word=小红书+法大+读研+日常分享'
+    url: '#'
   },
   {
     id: 10, platform: 'wechat',

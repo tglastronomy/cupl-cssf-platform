@@ -184,17 +184,26 @@ function ArticleReader({ item, onClose, setSavedToast }) {
             {/* 操作按钮 */}
             <div className="flex flex-col gap-3">
               {item.platform === 'xiaohongshu' ? (
-                <button
-                  onClick={() => {
-                    const kw = item.title.replace(/[｜|#\[\]]/g, ' ').substring(0, 25).trim()
-                    navigator.clipboard?.writeText(kw)
-                    setSavedToast('关键词已复制到剪贴板，请打开小红书App粘贴搜索')
-                    setTimeout(() => setSavedToast(''), 3000)
-                  }}
-                  className="flex items-center justify-center gap-2 px-6 py-3 bg-[#FE2C55] text-white font-medium rounded-xl hover:bg-[#e0264d] transition">
-                  <ExternalLink className="w-4 h-4" />
-                  复制关键词，去小红书App搜索
-                </button>
+                item.url?.includes('xiaohongshu.com/') ? (
+                  <a href={item.url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 px-6 py-3 bg-[#FE2C55] text-white font-medium rounded-xl hover:bg-[#e0264d] transition">
+                    <ExternalLink className="w-4 h-4" />
+                    查看小红书原帖
+                  </a>
+                ) : (
+                  <button
+                    onClick={() => {
+                      const kw = item.title.replace(/[｜|#\[\]【】]/g, ' ').substring(0, 25).trim()
+                      navigator.clipboard?.writeText(kw).then(() => {
+                        setSavedToast('✅ 已复制「' + kw + '」，正在打开小红书...')
+                        setTimeout(() => { window.open('https://www.xiaohongshu.com/explore', '_blank'); setSavedToast('') }, 800)
+                      }).catch(() => { setSavedToast('请手动搜索：' + kw); setTimeout(() => setSavedToast(''), 4000) })
+                    }}
+                    className="flex items-center justify-center gap-2 px-6 py-3 bg-[#FE2C55] text-white font-medium rounded-xl hover:bg-[#e0264d] transition">
+                    <ExternalLink className="w-4 h-4" />
+                    一键复制并打开小红书
+                  </button>
+                )
               ) : (
                 <a href={item.url} target="_blank" rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 px-6 py-3 bg-cupl-red text-white font-medium rounded-xl hover:bg-red-800 transition"

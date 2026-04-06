@@ -224,12 +224,13 @@ async function crawlXiaohongshu(db) {
         const title = $(el).find('h3').text().trim() || a.text().trim()
         const snippet = $(el).find('.VwiC3b, .IsZvec, span.aCOpRe').text().trim()
         if (title && href?.includes('xiaohongshu.com')) {
+          // 保留真实的小红书帖子URL（含/explore/或/discovery/item/的是真实帖子链接）
           insertArticle(db, {
             platform: 'xiaohongshu', title,
             summary: snippet.substring(0, 300),
             full_content: snippet,
             images: [], author: '小红书用户',
-            url: `https://m.baidu.com/s?word=${encodeURIComponent('小红书 ' + term)}`,
+            url: href,
             tags: ['小红书', '考研'], likes: 0, comments: 0,
           })
           n++
@@ -258,7 +259,7 @@ async function crawlXiaohongshu(db) {
             summary: snippet.substring(0, 300),
             full_content: snippet,
             images: [], author: '小红书用户',
-            url: `https://m.baidu.com/s?word=${encodeURIComponent('小红书 ' + term)}`,
+            url: href,
             tags: ['小红书', '考研'], likes: 0, comments: 0,
           })
           n++
@@ -287,7 +288,7 @@ async function crawlXiaohongshu(db) {
             summary: snippet.substring(0, 300),
             full_content: snippet,
             images: [], author: '小红书用户',
-            url: `https://m.baidu.com/s?word=${encodeURIComponent('小红书 ' + term)}`,
+            url: href?.includes('xiaohongshu.com') ? href : (href || '#'),
             tags: ['小红书', '考研'], likes: 0, comments: 0,
           })
           n++
@@ -315,7 +316,7 @@ async function crawlXiaohongshu(db) {
             platform: 'xiaohongshu', title, summary: snippet.substring(0, 300),
             full_content: snippet, images: [],
             author: '小红书用户',
-            url: href.includes('xiaohongshu.com') ? href : `https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(term)}`,
+            url: href,
             tags: ['小红书'], likes: 0, comments: 0,
           })
           n++
@@ -621,7 +622,7 @@ export async function crawlByKeyword(db, keyword) {
           if (insertArticle(db, {
             platform: 'xiaohongshu', title, summary: snippet.substring(0, 300),
             full_content: snippet, images: [], author: '小红书用户',
-            url: `https://m.baidu.com/s?word=${encodeURIComponent('小红书 ' + keyword)}`,
+            url: href.includes('xiaohongshu.com') ? href : (href || '#'),
             tags: ['小红书', keyword], likes: 0, comments: 0,
           })) total++
         }
