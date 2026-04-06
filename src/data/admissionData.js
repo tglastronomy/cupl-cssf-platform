@@ -95,6 +95,8 @@ export const scoreLines = [
 ]
 
 export const admissionStats = [
+  { year: 2025, program: '刑法学', planned: 18, applied: 340, admitted: 20, ratio: '17:1', avgScore: 385 },
+  { year: 2025, program: '诉讼法学', planned: 24, applied: 280, admitted: 26, ratio: '10.8:1', avgScore: 380 },
   { year: 2024, program: '刑法学', planned: 18, applied: 320, admitted: 20, ratio: '16:1', avgScore: 388 },
   { year: 2024, program: '诉讼法学', planned: 15, applied: 250, admitted: 17, ratio: '14.7:1', avgScore: 382 },
   { year: 2023, program: '刑法学', planned: 17, applied: 350, admitted: 19, ratio: '18.4:1', avgScore: 395 },
