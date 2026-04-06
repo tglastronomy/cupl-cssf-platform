@@ -78,15 +78,21 @@ function ImageGallery({ images }) {
 }
 
 // ==================== 完整文章阅读器 ====================
-function ArticleReader({ item, onClose, setSavedToast }) {
-  if (!item) return null
+function ArticleReader({ item, onClose, setSavedToast: parentToast }) {
+  const [localToast, setLocalToast] = useState('')
 
   useEffect(() => {
+    if (!item) return
     const handler = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handler)
     document.body.style.overflow = 'hidden'
     return () => { window.removeEventListener('keydown', handler); document.body.style.overflow = '' }
-  }, [onClose])
+  }, [onClose, item])
+
+  if (!item) return null
+
+  const showToast = (msg) => { setLocalToast(msg); setTimeout(() => setLocalToast(''), 5000) }
+  const setSavedToast = (msg) => { showToast(msg); if (parentToast) parentToast(msg) }
 
   const platformInfo = platforms.find(p => p.id === item.platform)
   const content = item.full_content || item.fullContent || item.summary || ''
@@ -184,26 +190,28 @@ function ArticleReader({ item, onClose, setSavedToast }) {
             {/* 操作按钮 */}
             <div className="flex flex-col gap-3">
               {item.platform === 'xiaohongshu' ? (
-                item.url?.includes('xiaohongshu.com/') ? (
-                  <a href={item.url} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 px-6 py-3 bg-[#FE2C55] text-white font-medium rounded-xl hover:bg-[#e0264d] transition">
-                    <ExternalLink className="w-4 h-4" />
-                    查看小红书原帖
-                  </a>
-                ) : (
-                  <button
-                    onClick={() => {
-                      const kw = item.title.replace(/[｜|#\[\]【】]/g, ' ').substring(0, 25).trim()
-                      navigator.clipboard?.writeText(kw).then(() => {
-                        setSavedToast('✅ 已复制「' + kw + '」，正在打开小红书...')
-                        setTimeout(() => { window.open('https://www.xiaohongshu.com/explore', '_blank'); setSavedToast('') }, 800)
-                      }).catch(() => { setSavedToast('请手动搜索：' + kw); setTimeout(() => setSavedToast(''), 4000) })
+                <button
+                  onClick={() => {
+                    const kw = item.title.replace(/[｜|#\[\]【】""]/g, ' ').substring(0, 25).trim()
+                    // 复制到剪贴板（兼容微信和各种浏览器）
+                    try {
+                      const ta = document.createElement('textarea')
+                      ta.value = kw
+                      ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0'
+                      document.body.appendChild(ta)
+                      ta.select()
+                      ta.setSelectionRange(0, 99999)
+                      document.execCommand('copy')
+                      document.body.removeChild(ta)
+                    } catch(e) {}
+                    try { navigator.clipboard?.writeText(kw) } catch(e) {}
+                    // 直接显示toast
+                    setLocalToast('✅ 已复制「' + kw + '」\n请打开小红书App → 搜索框长按粘贴')
                     }}
                     className="flex items-center justify-center gap-2 px-6 py-3 bg-[#FE2C55] text-white font-medium rounded-xl hover:bg-[#e0264d] transition">
                     <ExternalLink className="w-4 h-4" />
-                    一键复制并打开小红书
+                    一键复制，去小红书搜索
                   </button>
-                )
               ) : (
                 <a href={item.url} target="_blank" rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 px-6 py-3 bg-cupl-red text-white font-medium rounded-xl hover:bg-red-800 transition"
@@ -237,6 +245,18 @@ function ArticleReader({ item, onClose, setSavedToast }) {
             </div>
           </div>
         </div>
+
+        {/* Modal内的Toast（确保在modal层级之上） */}
+        {localToast && (
+          <div className="absolute inset-0 z-[50] flex items-center justify-center p-6" onClick={() => setLocalToast('')}>
+            <div className="bg-gray-900/95 text-white px-8 py-6 rounded-2xl shadow-2xl text-center max-w-sm animate-fade-in-up" onClick={e => e.stopPropagation()}>
+              <p className="text-lg font-bold whitespace-pre-line leading-relaxed">{localToast}</p>
+              <button onClick={() => setLocalToast('')} className="mt-4 px-6 py-2 bg-white/20 rounded-xl text-sm hover:bg-white/30 transition">
+                知道了
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -525,8 +545,13 @@ export default function NewsFeedSection() {
 
       {/* Toast 提示 */}
       {savedToast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[300] bg-gray-900 text-white px-6 py-3 rounded-xl shadow-lg text-sm animate-fade-in-up">
-          {savedToast}
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-6" onClick={() => setSavedToast('')}>
+          <div className="bg-gray-900/95 text-white px-8 py-6 rounded-2xl shadow-2xl text-center max-w-sm animate-fade-in-up" onClick={e => e.stopPropagation()}>
+            <p className="text-lg font-bold whitespace-pre-line leading-relaxed">{savedToast}</p>
+            <button onClick={() => setSavedToast('')} className="mt-4 px-6 py-2 bg-white/20 rounded-xl text-sm hover:bg-white/30 transition">
+              知道了
+            </button>
+          </div>
         </div>
       )}
     </section>

@@ -191,25 +191,112 @@ async function crawlBilibili(db) {
 }
 
 // ============================================================
-// 小红书：多通道搜索引擎 + 小红书网页版API
+// 小红书：通过API直接获取真实笔记ID
 // ============================================================
+
+// 获取小红书 web cookie（访问首页自动获取）
+async function getXhsCookie() {
+  try {
+    const res = await axios.get('https://www.xiaohongshu.com/explore', {
+      headers: { 'User-Agent': UA, 'Accept': 'text/html' },
+      timeout: 10000,
+      maxRedirects: 3,
+    })
+    const cookies = res.headers['set-cookie']
+    if (cookies) return cookies.map(c => c.split(';')[0]).join('; ')
+  } catch (e) { /* silent */ }
+  return ''
+}
+
+// 调用小红书搜索API获取真实笔记
+async function searchXhsNotes(keyword, cookie) {
+  const results = []
+  try {
+    const searchId = Math.random().toString(36).substring(2, 20)
+    const res = await axios.post('https://edith.xiaohongshu.com/api/sns/web/v1/search/notes', {
+      keyword,
+      page: 1,
+      page_size: 20,
+      search_id: searchId,
+      sort: 'general',
+      note_type: 0,
+    }, {
+      headers: {
+        'User-Agent': UA,
+        'Content-Type': 'application/json',
+        'Origin': 'https://www.xiaohongshu.com',
+        'Referer': 'https://www.xiaohongshu.com/',
+        'Cookie': cookie,
+      },
+      timeout: 10000,
+    })
+    if (res.data?.data?.items) {
+      for (const item of res.data.data.items) {
+        const note = item.note_card || item
+        if (note.note_id || note.id) {
+          results.push({
+            noteId: note.note_id || note.id,
+            title: note.display_title || note.title || '',
+            desc: note.desc || '',
+            author: note.user?.nickname || note.user?.nick_name || '小红书用户',
+            likes: note.interact_info?.liked_count || note.liked_count || 0,
+            images: (note.image_list || note.images_list || []).map(img => img.url_default || img.url || '').filter(Boolean).slice(0, 9),
+          })
+        }
+      }
+    }
+  } catch (e) {
+    // API可能需要签名，尝试失败时静默
+    console.log(`  XHS API search "${keyword}": ${e.response?.status || e.message}`)
+  }
+  return results
+}
+
 async function crawlXiaohongshu(db) {
   let n = 0
   const terms = [
-    '法大考研 刑法 经验', '中国政法大学 考研 上岸', '法大 刑事诉讼法 备考',
-    '法大 研究生 日常', '法大 校园生活', '法大 复试 面试',
-    '法大 参考书 推荐', '法大 导师 选择', '法大 昌平校区',
-    '法大 考研 真题', '法大 读研 体验', '法大 宿舍 食堂',
-    '法大 就业 去向', '法大 奖学金', '政法大学 在读 分享',
-    '法大 法学 备考', '法大 刑法学 笔记', '法大 考研 政治 英语',
-    '法大 调剂', '法大 录取 通知',
+    '法大考研', '中国政法大学考研', '法大刑法', '法大刑事诉讼法',
+    '法大考研经验', '法大上岸', '法大复试', '法大研究生',
+    '法大校园', '法大生活', '法大备考', '法大导师',
+    '法大真题', '法大参考书', '法大就业', '法大昌平',
+    '法大宿舍', '法大食堂', '法大奖学金', '法大读研',
     '中国政法大学 刑法', '法大考研 复试真题', '法大 研究生 就业',
     '法大 708 法学综合', '法大 808 刑法', '法大 811 刑诉',
     '法大 曲新久', '法大 罗翔', '法大考研 分数线',
     '中国政法大学 校园', '法大 在读 感受',
   ]
 
-  // 通道1: Google 搜索（对小红书索引最好）
+  // 通道0 (最优先): 小红书API直接搜索，获取真实笔记ID
+  console.log('  [xiaohongshu] 尝试API直接搜索...')
+  const cookie = await getXhsCookie()
+  for (const term of terms.slice(0, 15)) {
+    const notes = await searchXhsNotes(term, cookie)
+    for (const note of notes) {
+      const added = insertArticle(db, {
+        platform: 'xiaohongshu',
+        title: note.title || term,
+        summary: note.desc?.substring(0, 200) || '',
+        full_content: note.desc || '',
+        images: note.images,
+        author: note.author,
+        // 真实的笔记链接！手机上会直接唤起小红书App
+        url: `https://www.xiaohongshu.com/explore/${note.noteId}`,
+        tags: ['小红书', '考研'],
+        likes: note.likes, comments: 0,
+      })
+      if (added) n++
+    }
+    if (notes.length > 0) console.log(`    "${term}": ${notes.length} notes`)
+    await delay(600)
+  }
+
+  // 如果API获取到了足够多的内容，跳过搜索引擎通道
+  if (n >= 30) {
+    logCrawl(db, 'xiaohongshu', 'success', n, `API direct: ${n} notes with real URLs`)
+    return n
+  }
+
+  // 通道1: Google 搜索（对小红书索引最好）（API不够时补充）
   for (const term of terms) {
     try {
       const res = await axios.get('https://www.google.com/search', {
@@ -601,7 +688,23 @@ export async function crawlByKeyword(db, keyword) {
     }
   } catch (e) { /* silent */ }
 
-  // 小红书 via Google + Bing
+  // 小红书 via API (优先)
+  try {
+    const cookie = await getXhsCookie()
+    const notes = await searchXhsNotes(keyword, cookie)
+    for (const note of notes) {
+      if (insertArticle(db, {
+        platform: 'xiaohongshu', title: note.title || keyword,
+        summary: note.desc?.substring(0, 200) || '',
+        full_content: note.desc || '', images: note.images,
+        author: note.author,
+        url: `https://www.xiaohongshu.com/explore/${note.noteId}`,
+        tags: ['小红书', keyword], likes: note.likes, comments: 0,
+      })) total++
+    }
+  } catch (e) { /* silent */ }
+
+  // 小红书 via Google + Bing (API失败时补充)
   for (const engine of ['google', 'bing']) {
     try {
       const url = engine === 'google'
