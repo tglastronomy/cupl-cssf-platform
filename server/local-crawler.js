@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * 本地爬虫 — 在你的电脑（国内网络）上运行
- * 从百度/搜狗搜索小红书相关内容，上传到 Render 后端
+ * 小红书爬虫 — 可在本地或 GitHub Actions 运行
+ * 多引擎搜索(Google/Bing/Baidu/DuckDuckGo)小红书内容 → 上传到 Render 后端
  *
  * 用法: cd server && node local-crawler.js
  */
@@ -9,77 +9,118 @@ import axios from 'axios'
 import * as cheerio from 'cheerio'
 
 const BACKEND = 'https://cupl-cssf-api.onrender.com'
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
 
-const SEARCH_TERMS = [
-  '小红书 法大考研 刑法 经验',
-  '小红书 中国政法大学 考研 上岸',
-  '小红书 法大 刑事诉讼法 备考',
-  '小红书 法大 研究生 日常',
-  '小红书 法大 校园生活',
-  '小红书 法大 复试 面试',
-  '小红书 法大 参考书',
-  '小红书 法大 导师',
-  '小红书 法大 昌平校区',
-  '小红书 法大 考研 真题',
-  '小红书 法大 读研 体验',
-  '小红书 法大 宿舍 食堂',
-  '小红书 法大 就业',
-  '小红书 法大 奖学金',
-  '小红书 法大 法学 备考',
-  '小红书 法大 刑法学 笔记',
-  '小红书 法大 708',
-  '小红书 法大 808',
-  '小红书 法大 811',
-  '小红书 法大 罗翔',
-  '小红书 法大 曲新久',
-  '小红书 法大考研 分数线',
-  '小红书 法大 调剂',
-  '小红书 中国政法大学 研究生',
-  '小红书 法大 校友',
-  '小红书 法大 毕业去向',
-  '小红书 法大考研 政治 英语',
-  '小红书 法大 在读 感受',
-  '小红书 法大 刑法 总论 分论',
-  '小红书 法大 证据法',
+const TERMS = [
+  '法大考研 刑法', '中国政法大学 考研 上岸', '法大 刑事诉讼法',
+  '法大 研究生 日常', '法大 校园', '法大 复试 面试',
+  '法大 参考书', '法大 导师', '法大 昌平校区', '法大 真题',
+  '法大 读研', '法大 宿舍 食堂', '法大 就业', '法大 奖学金',
+  '法大 备考', '法大 刑法学 笔记', '法大 708', '法大 808',
+  '法大 罗翔', '法大 曲新久', '法大 分数线', '法大 调剂',
+  '中国政法大学 研究生', '法大 校友', '法大 毕业', '法大 证据法',
 ]
 
+function categorize(text) {
+  if (['经验', '上岸', '备考', '心得', '一战'].some(k => text.includes(k))) return 'experience'
+  if (['招生', '简章', '政策', '通知'].some(k => text.includes(k))) return 'policy'
+  if (['参考书', '教材', '真题', '知识点'].some(k => text.includes(k))) return 'review'
+  if (['复试', '面试', '调剂', '录取'].some(k => text.includes(k))) return 'retest'
+  if (['校园', '宿舍', '食堂', '日常', '就业'].some(k => text.includes(k))) return 'life'
+  if (['导师', '教授', '研究方向'].some(k => text.includes(k))) return 'advisor'
+  return 'general'
+}
+
+function makeArticle(title, snippet, url) {
+  return {
+    platform: 'xiaohongshu',
+    title: title.substring(0, 100),
+    summary: snippet.substring(0, 300),
+    full_content: snippet,
+    images: [],
+    author: '小红书用户',
+    url: url || '#',
+    tags: ['小红书', '法大考研'],
+    likes: 0, comments: 0,
+    category: categorize(title + ' ' + snippet),
+  }
+}
+
+// ===== 搜索引擎 =====
+
+async function searchGoogle(keyword) {
+  const results = []
+  try {
+    const res = await axios.get('https://www.google.com/search', {
+      params: { q: `小红书 ${keyword}`, num: 30 },
+      headers: { 'User-Agent': UA, 'Accept-Language': 'zh-CN,zh;q=0.9' },
+      timeout: 10000,
+    })
+    const $ = cheerio.load(res.data)
+    $('div.g, div[data-hveid]').each((_, el) => {
+      const title = $(el).find('h3').text().trim()
+      const snippet = $(el).find('.VwiC3b, .IsZvec').text().trim()
+      const href = $(el).find('a').first().attr('href')
+      if (title && title.length > 5) results.push(makeArticle(title, snippet, href))
+    })
+  } catch (e) { /* silent */ }
+  return results
+}
+
+async function searchBing(keyword) {
+  const results = []
+  try {
+    const res = await axios.get('https://www.bing.com/search', {
+      params: { q: `小红书 ${keyword}`, count: 30 },
+      headers: { 'User-Agent': UA },
+      timeout: 10000,
+    })
+    const $ = cheerio.load(res.data)
+    $('li.b_algo').each((_, el) => {
+      const title = $(el).find('h2 a').text().trim()
+      const snippet = $(el).find('.b_caption p').text().trim()
+      const href = $(el).find('h2 a').attr('href')
+      if (title && title.length > 5) results.push(makeArticle(title, snippet, href))
+    })
+  } catch (e) { /* silent */ }
+  return results
+}
+
+async function searchDuckDuckGo(keyword) {
+  const results = []
+  try {
+    const res = await axios.get('https://html.duckduckgo.com/html/', {
+      params: { q: `小红书 ${keyword}` },
+      headers: { 'User-Agent': UA },
+      timeout: 10000,
+    })
+    const $ = cheerio.load(res.data)
+    $('div.result, div.web-result').each((_, el) => {
+      const title = $(el).find('a.result__a, h2 a').text().trim()
+      const snippet = $(el).find('a.result__snippet, .result__body').text().trim()
+      const href = $(el).find('a.result__a, h2 a').attr('href')
+      if (title && title.length > 5) results.push(makeArticle(title, snippet, href))
+    })
+  } catch (e) { /* silent */ }
+  return results
+}
+
 async function searchBaidu(keyword) {
-  // axios and cheerio imported at top
   const results = []
   try {
     const res = await axios.get('https://www.baidu.com/s', {
-      params: { wd: keyword, rn: 50 },
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Accept-Language': 'zh-CN,zh;q=0.9',
-      },
-      timeout: 15000,
+      params: { wd: `小红书 ${keyword}`, rn: 50 },
+      headers: { 'User-Agent': UA, 'Accept-Language': 'zh-CN' },
+      timeout: 10000,
     })
     const $ = cheerio.load(res.data)
     $('div.result, div.c-container').each((_, el) => {
       const title = $(el).find('h3 a').text().trim()
+      const snippet = $(el).find('.c-abstract, .content-right_2s-H4').text().trim()
       const href = $(el).find('h3 a').attr('href')
-      const snippet = $(el).find('.c-abstract, .content-right_2s-H4, .c-span-last').text().trim()
-      if (title && title.length > 5 && (title.includes('小红书') || snippet.includes('小红书') || keyword.includes('小红书'))) {
-        results.push({
-          platform: 'xiaohongshu',
-          title: title.replace(/[-_].*小红书.*$/, '').replace(/小红书$/, '').trim() || title,
-          summary: snippet.substring(0, 300),
-          full_content: snippet,
-          images: [],
-          author: '小红书用户',
-          url: href || '#',
-          tags: ['小红书', '法大考研'],
-          likes: 0,
-          comments: 0,
-          category: categorize(title + ' ' + snippet),
-        })
-      }
+      if (title && title.length > 5) results.push(makeArticle(title, snippet, href))
     })
-  } catch (e) {
-    console.log(`  ✗ 搜索失败: ${keyword} (${e.message})`)
-  }
+  } catch (e) { /* silent */ }
   return results
 }
 
@@ -87,45 +128,24 @@ async function searchSogou(keyword) {
   const results = []
   try {
     const res = await axios.get('https://www.sogou.com/web', {
-      params: { query: keyword, num: 50 },
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36', 'Accept-Language': 'zh-CN' },
-      timeout: 15000,
+      params: { query: `小红书 ${keyword}`, num: 30 },
+      headers: { 'User-Agent': UA },
+      timeout: 10000,
     })
     const $ = cheerio.load(res.data)
-    $('div.vrwrap, div.rb, div.results .result').each((_, el) => {
-      const title = $(el).find('h3 a, a.title').text().trim()
-      const href = $(el).find('h3 a, a.title').attr('href')
-      const snippet = $(el).find('.str_info, .ft, .space-txt').text().trim()
-      if (title && title.length > 5 && (title.includes('小红书') || snippet.includes('小红书'))) {
-        results.push({
-          platform: 'xiaohongshu',
-          title: title.replace(/[-_].*小红书.*$/, '').trim() || title,
-          summary: snippet.substring(0, 300),
-          full_content: snippet,
-          images: [], author: '小红书用户',
-          url: href || '#',
-          tags: ['小红书', '法大考研'],
-          likes: 0, comments: 0,
-          category: categorize(title + ' ' + snippet),
-        })
-      }
+    $('div.vrwrap, div.rb').each((_, el) => {
+      const title = $(el).find('h3 a').text().trim()
+      const snippet = $(el).find('.str_info, .ft').text().trim()
+      const href = $(el).find('h3 a').attr('href')
+      if (title && title.length > 5) results.push(makeArticle(title, snippet, href))
     })
   } catch (e) { /* silent */ }
   return results
 }
 
-function categorize(text) {
-  if (['经验', '上岸', '备考', '心得', '一战'].some(k => text.includes(k))) return 'experience'
-  if (['招生', '简章', '政策', '通知', '公告'].some(k => text.includes(k))) return 'policy'
-  if (['参考书', '教材', '真题', '知识点', '背诵'].some(k => text.includes(k))) return 'review'
-  if (['复试', '面试', '调剂', '录取'].some(k => text.includes(k))) return 'retest'
-  if (['校园', '宿舍', '食堂', '奖学金', '日常', '就业'].some(k => text.includes(k))) return 'life'
-  if (['导师', '教授', '研究方向'].some(k => text.includes(k))) return 'advisor'
-  return 'general'
-}
+// ===== 上传 =====
 
-async function uploadToBackend(articles) {
-  // axios imported at top
+async function upload(articles) {
   try {
     const res = await axios.post(`${BACKEND}/api/upload-articles`, { articles }, {
       headers: { 'Content-Type': 'application/json' },
@@ -133,67 +153,62 @@ async function uploadToBackend(articles) {
     })
     return res.data
   } catch (e) {
-    console.log(`  ✗ 上传失败: ${e.message}`)
+    console.log(`  x upload failed: ${e.message}`)
     return null
   }
 }
 
+// ===== 主函数 =====
+
 async function main() {
-  console.log('')
-  console.log('  ===== 法大刑司考研 · 小红书本地爬虫 =====')
-  console.log('  百度+搜狗双引擎并发 → 上传到云端后端')
-  console.log('  ==========================================')
-  console.log('')
+  console.log('\n  ===== XHS Crawler (5 engines) =====\n')
 
-  let allArticles = []
+  let all = []
 
-  // 百度+搜狗双引擎并发，每5个词一批
-  for (let i = 0; i < SEARCH_TERMS.length; i += 5) {
-    const chunk = SEARCH_TERMS.slice(i, i + 5)
-    console.log(`[${Math.floor(i/5)+1}/${Math.ceil(SEARCH_TERMS.length/5)}] 搜索: ${chunk[0].substring(4)}...`)
+  for (let i = 0; i < TERMS.length; i += 5) {
+    const chunk = TERMS.slice(i, i + 5)
+    console.log(`[${Math.floor(i/5)+1}/${Math.ceil(TERMS.length/5)}] ${chunk[0]}...`)
 
-    // 百度和搜狗同时搜索
-    const results = await Promise.all([
-      ...chunk.map(term => searchBaidu(term)),
-      ...chunk.map(term => searchSogou(term)),
+    // 5个搜索引擎全并发
+    const jobs = chunk.flatMap(term => [
+      searchGoogle(term),
+      searchBing(term),
+      searchDuckDuckGo(term),
+      searchBaidu(term),
+      searchSogou(term),
     ])
+    const results = await Promise.all(jobs)
     const batch = results.flat()
-    allArticles.push(...batch)
-    console.log(`  ✓ 本批找到 ${batch.length} 条内容`)
-
-    // 每批之间间隔500ms
-    await new Promise(r => setTimeout(r, 500))
+    all.push(...batch)
+    console.log(`  found ${batch.length}`)
+    await new Promise(r => setTimeout(r, 300))
   }
 
-  // 去重（按标题）
+  // 去重
   const seen = new Set()
-  const unique = allArticles.filter(a => {
-    if (seen.has(a.title)) return false
-    seen.add(a.title)
+  const unique = all.filter(a => {
+    const key = a.title.substring(0, 30)
+    if (seen.has(key)) return false
+    seen.add(key)
     return true
   })
 
-  console.log(`\n📊 总计: ${allArticles.length} 条 → 去重后: ${unique.length} 条\n`)
+  console.log(`\nTotal: ${all.length} -> deduplicated: ${unique.length}\n`)
 
   if (unique.length === 0) {
-    console.log('❌ 未搜索到任何内容，请检查网络连接')
+    console.log('No results found.')
     return
   }
 
-  // 分批上传（每批50条）
-  console.log('📤 正在上传到后端...')
-  let totalAdded = 0
+  // 上传
+  let added = 0
   for (let i = 0; i < unique.length; i += 50) {
     const batch = unique.slice(i, i + 50)
-    const result = await uploadToBackend(batch)
-    if (result) {
-      totalAdded += result.added
-      console.log(`  ✓ 上传 ${batch.length} 条，新增 ${result.added} 条`)
-    }
+    const r = await upload(batch)
+    if (r) { added += r.added; console.log(`  uploaded ${batch.length}, new: ${r.added}`) }
   }
 
-  console.log(`\n✅ 完成！共上传 ${unique.length} 条，新增 ${totalAdded} 条到后端数据库`)
-  console.log('📱 刷新手机页面即可看到最新小红书内容\n')
+  console.log(`\nDone! ${added} new articles uploaded.\n`)
 }
 
-main().catch(e => console.error('Error:', e.message))
+main().catch(e => console.error(e.message))
