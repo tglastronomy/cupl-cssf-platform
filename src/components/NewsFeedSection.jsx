@@ -338,7 +338,7 @@ export default function NewsFeedSection() {
   // 始终请求全部数据，筛选交给前端
   const fetchFromBackend = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/articles?limit=500`)
+      const res = await fetch(`${API_BASE}/api/articles?limit=2000`)
       if (res.ok) {
         const data = await res.json()
         if (data.articles?.length > 0) {
