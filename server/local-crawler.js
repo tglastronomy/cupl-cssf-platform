@@ -245,14 +245,45 @@ async function main() {
     console.log(`  [${Math.min(i+10, unique.length)}/${unique.length}] content: ${withContent}, images: ${withImages}`)
   }
 
-  const richCount = unique.filter(a => a.full_content.length > 100).length
-  const imgCount = unique.filter(a => a.images.length > 0).length
-  console.log(`\nEnriched: ${richCount} with full content, ${imgCount} with images\n`)
+  // === 严格过滤 ===
+  // 1) 必须有实质内容（full_content > 50字符）
+  // 2) 必须和法大考研相关（标题或内容包含关键词）
+  const RELEVANT_KW = ['法大', '政法大学', 'CUPL', '刑法', '刑诉', '考研', '法学', '法硕',
+    '复试', '初试', '分数线', '报录比', '参考书', '导师', '上岸', '备考',
+    '曲新久', '罗翔', '汪海燕', '张保生', '708', '808', '811']
+
+  const qualified = unique.filter(a => {
+    // 有实质内容
+    if (a.full_content.length < 50 && a.summary.length < 50) return false
+    // 和考研相关
+    const text = a.title + ' ' + a.full_content
+    return RELEVANT_KW.some(k => text.includes(k))
+  })
+
+  // 过滤掉无效图片URL（太短或明显不是图片的）
+  qualified.forEach(a => {
+    a.images = (a.images || []).filter(url =>
+      url.startsWith('http') && url.length > 30 &&
+      (url.includes('.jpg') || url.includes('.png') || url.includes('.jpeg') ||
+       url.includes('.webp') || url.includes('image') || url.includes('pic') ||
+       url.includes('img') || url.includes('photo') || url.includes('cdn'))
+    )
+  })
+
+  const richCount = qualified.filter(a => a.full_content.length > 200).length
+  const imgCount = qualified.filter(a => a.images.length > 0).length
+  console.log(`\nAfter filter: ${qualified.length} relevant (${richCount} rich, ${imgCount} with images)\n`)
+  console.log(`Removed: ${unique.length - qualified.length} irrelevant or empty\n`)
+
+  if (qualified.length === 0) {
+    console.log('No qualified articles to upload.')
+    return
+  }
 
   // 上传
   let added = 0
-  for (let i = 0; i < unique.length; i += 50) {
-    const batch = unique.slice(i, i + 50)
+  for (let i = 0; i < qualified.length; i += 50) {
+    const batch = qualified.slice(i, i + 50)
     const r = await upload(batch)
     if (r) { added += r.added; console.log(`  uploaded ${batch.length}, new: ${r.added}`) }
   }

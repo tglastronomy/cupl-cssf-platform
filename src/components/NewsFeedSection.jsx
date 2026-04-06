@@ -19,6 +19,12 @@ function formatNumber(n) {
   return n
 }
 
+// 图片代理：绕过CDN防盗链
+function proxyImg(url) {
+  if (!url || !url.startsWith('http')) return url
+  return `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=800&q=75`
+}
+
 function getPlatformName(id) {
   const map = { xiaohongshu: '小红书', bilibili: 'B站', zhihu: '知乎', wechat: '微信公众号', tieba: '百度贴吧', weibo: '微博', kaoyan: '考研论坛', douyin: '抖音' }
   return map[id] || id
@@ -44,7 +50,7 @@ function ImageGallery({ images }) {
               onClick={() => setViewIdx(i)}
             >
               <img
-                src={src}
+                src={proxyImg(src)}
                 alt={`配图${i + 1}`}
                 className="w-full h-full object-cover"
                 loading="lazy"
@@ -64,7 +70,7 @@ function ImageGallery({ images }) {
             className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30">
             <ChevronLeft className="w-6 h-6 text-white" />
           </button>
-          <img src={images[viewIdx]} alt="" className="max-w-[90vw] max-h-[90vh] object-contain" referrerPolicy="no-referrer" crossOrigin="anonymous" onClick={e => e.stopPropagation()} />
+          <img src={proxyImg(images[viewIdx])} alt="" className="max-w-[90vw] max-h-[90vh] object-contain" onClick={e => e.stopPropagation()} />
           <button onClick={(e) => { e.stopPropagation(); setViewIdx(Math.min(images.length - 1, viewIdx + 1)) }}
             className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30">
             <ChevronRight className="w-6 h-6 text-white" />
@@ -127,7 +133,7 @@ function ArticleReader({ item, onClose, setSavedToast: parentToast }) {
             {/* 作者 */}
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
               {item.author_avatar ? (
-                <img src={item.author_avatar} alt="" className="w-10 h-10 rounded-full object-cover" referrerPolicy="no-referrer" onError={e => { e.target.style.display = 'none' }} />
+                <img src={proxyImg(item.author_avatar)} alt="" className="w-10 h-10 rounded-full object-cover" onError={e => { e.target.style.display = 'none' }} />
               ) : (
                 <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: `${platformInfo?.color}20` }}>
                   <User className="w-5 h-5" style={{ color: platformInfo?.color }} />
@@ -276,7 +282,7 @@ function NewsCard({ item, onClick }) {
         <div className="flex gap-1.5 mb-3 overflow-hidden rounded-lg">
           {images.slice(0, 3).map((src, i) => (
             <div key={i} className="w-20 h-20 bg-gray-100 rounded overflow-hidden shrink-0">
-              <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" onError={e => { e.target.parentElement.style.display = 'none' }} />
+              <img src={proxyImg(src)} alt="" className="w-full h-full object-cover" loading="lazy" onError={e => { e.target.parentElement.style.display = 'none' }} />
             </div>
           ))}
           {images.length > 3 && (
