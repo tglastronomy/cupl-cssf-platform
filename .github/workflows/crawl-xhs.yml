@@ -16,5 +16,15 @@ jobs:
           node-version: '20'
       - name: 安装依赖
         run: cd server && npm install
-      - name: 运行小红书爬虫
+      - name: 唤醒Render后端
+        run: curl -s --max-time 60 https://cupl-cssf-api.onrender.com/api/stats || true
+      - name: 触发Render全平台爬取
+        run: |
+          curl -s --max-time 10 -X POST https://cupl-cssf-api.onrender.com/api/crawl \
+            -H "Content-Type: application/json" -d '{}' || true
+      - name: 运行小红书爬虫上传
         run: cd server && node local-crawler.js
+      - name: 再次触发Render爬取补充其他平台
+        run: |
+          curl -s --max-time 10 -X POST https://cupl-cssf-api.onrender.com/api/crawl \
+            -H "Content-Type: application/json" -d '{}' || true

@@ -13,8 +13,9 @@ const PORT = 3001
 const DB_PATH = path.join(__dirname, 'data.db')
 
 const SQL = await initSqlJs()
-// 每次启动清空旧数据库，确保schema最新
-const db = new SQL.Database()
+// 加载已有数据库，没有则创建新的
+const dbBuffer = fs.existsSync(DB_PATH) ? fs.readFileSync(DB_PATH) : null
+const db = dbBuffer ? new SQL.Database(dbBuffer) : new SQL.Database()
 
 // 升级后的 schema：增加 full_content 和 images 字段
 db.run(`
