@@ -31,18 +31,46 @@ function categorize(text) {
   return 'general'
 }
 
-function makeArticle(title, snippet, url) {
+function makeArticle(title, snippet, url, fullContent, images) {
   return {
     platform: 'xiaohongshu',
     title: title.substring(0, 100),
     summary: snippet.substring(0, 300),
-    full_content: snippet,
-    images: [],
+    full_content: fullContent || snippet,
+    images: images || [],
     author: '小红书用户',
     url: url || '#',
     tags: ['小红书', '法大考研'],
     likes: 0, comments: 0,
     category: categorize(title + ' ' + snippet),
+  }
+}
+
+// ===== 深度抓取页面全文+图片 =====
+async function deepScrape(url) {
+  if (!url || url === '#' || url.length < 10) return { text: '', images: [] }
+  try {
+    const res = await axios.get(url, {
+      headers: { 'User-Agent': UA, 'Accept': 'text/html' },
+      timeout: 8000,
+      maxRedirects: 3,
+    })
+    const $ = cheerio.load(res.data)
+    $('script, style, nav, header, footer').remove()
+    const text = $('article, .content, main, .detail, .note-content, body')
+      .first().text().replace(/\s+/g, ' ').trim().substring(0, 5000)
+    const images = []
+    $('img').each((_, el) => {
+      const src = $(el).attr('src') || $(el).attr('data-src') || $(el).attr('data-original')
+      if (src && !src.includes('avatar') && !src.includes('icon') && !src.includes('logo')
+          && !src.includes('emoji') && src.length > 20) {
+        const full = src.startsWith('//') ? `https:${src}` : src
+        if (full.startsWith('http') && !images.includes(full)) images.push(full)
+      }
+    })
+    return { text, images: images.slice(0, 9) }
+  } catch (e) {
+    return { text: '', images: [] }
   }
 }
 
@@ -193,12 +221,33 @@ async function main() {
     return true
   })
 
-  console.log(`\nTotal: ${all.length} -> deduplicated: ${unique.length}\n`)
+  console.log(`\nTotal: ${all.length} -> deduplicated: ${unique.length}`)
 
   if (unique.length === 0) {
     console.log('No results found.')
     return
   }
+
+  // 深度抓取每个URL获取全文+图片（10个并发）
+  console.log(`\nDeep scraping ${unique.length} pages for full content + images...`)
+  for (let i = 0; i < unique.length; i += 10) {
+    const batch = unique.slice(i, i + 10)
+    const scraped = await Promise.all(batch.map(a => deepScrape(a.url)))
+    scraped.forEach((s, j) => {
+      if (s.text && s.text.length > batch[j].full_content.length) {
+        batch[j].full_content = s.text
+        batch[j].summary = s.text.substring(0, 300)
+      }
+      if (s.images.length > 0) batch[j].images = s.images
+    })
+    const withContent = batch.filter(a => a.full_content.length > 100).length
+    const withImages = batch.filter(a => a.images.length > 0).length
+    console.log(`  [${Math.min(i+10, unique.length)}/${unique.length}] content: ${withContent}, images: ${withImages}`)
+  }
+
+  const richCount = unique.filter(a => a.full_content.length > 100).length
+  const imgCount = unique.filter(a => a.images.length > 0).length
+  console.log(`\nEnriched: ${richCount} with full content, ${imgCount} with images\n`)
 
   // 上传
   let added = 0

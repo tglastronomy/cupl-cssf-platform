@@ -139,22 +139,12 @@ function ArticleReader({ item, onClose, setSavedToast: parentToast }) {
               </div>
             </div>
 
-            {/* ===== 核心：完整正文 ===== */}
-            {hasRealContent ? (
-              <div className="mb-6 prose prose-sm max-w-none">
-                <div className="text-gray-800 leading-relaxed whitespace-pre-line text-[15px]">
-                  {content}
-                </div>
+            {/* ===== 正文内容 ===== */}
+            <div className="mb-6">
+              <div className="text-gray-800 leading-relaxed whitespace-pre-line text-[15px]">
+                {content || item.summary || '暂无详细内容'}
               </div>
-            ) : (
-              <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm text-amber-800 font-medium">原文内容较长，以下为摘要</p>
-                  <p className="text-sm text-amber-700 mt-1">{item.summary}</p>
-                </div>
-              </div>
-            )}
+            </div>
 
             {/* ===== 图片画廊 ===== */}
             <ImageGallery images={images} />
