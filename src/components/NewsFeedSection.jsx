@@ -365,18 +365,20 @@ export default function NewsFeedSection() {
       body: JSON.stringify(activePlatform !== 'all' ? { platform: activePlatform } : {})
     }).catch(() => {})
     fetchFromBackend()
+    setSavedToast('⏳ 全平台抓取已启动，新内容将在1-2分钟内陆续出现...')
     let count = 0
     const poll = setInterval(() => {
       fetchFromBackend()
       count++
-      if (count >= 4) {
+      if (count >= 18) {
         clearInterval(poll)
         setCrawling(false)
         setIsRefreshing(false)
-        setSavedToast('抓取完成')
-        setTimeout(() => setSavedToast(''), 3000)
+        fetchFromBackend()
+        setSavedToast('✅ 抓取完成')
+        setTimeout(() => setSavedToast(''), 4000)
       }
-    }, 2000)
+    }, 10000)
   }
 
   // 关键词搜索抓取
@@ -482,29 +484,36 @@ export default function NewsFeedSection() {
             <button
               onClick={() => {
                 setCrawling(true)
-                // 触发抓取
+                const before = newsItems.length
                 fetch(`${API_BASE}/api/crawl`, {
                   method: 'POST', headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ platform: activePlatform })
                 }).catch(() => {})
-                // 轮询获取结果
+                setSavedToast('⏳ 抓取引擎已启动，新内容将在1-2分钟内陆续出现...')
+                // 持续轮询3分钟（每10秒刷新一次，共18次）
                 let count = 0
                 const poll = setInterval(() => {
-                  fetchFromBackend()
+                  fetchFromBackend().then(() => {
+                    const now = newsItems.length
+                    if (now > before) {
+                      setSavedToast(`✅ 已新增 ${now - before} 条内容，继续抓取中...`)
+                    }
+                  })
                   count++
-                  if (count >= 5) {
+                  if (count >= 18) {
                     clearInterval(poll)
                     setCrawling(false)
-                    setSavedToast('抓取完成')
-                    setTimeout(() => setSavedToast(''), 3000)
+                    fetchFromBackend()
+                    setSavedToast('✅ 抓取完成，已更新最新内容')
+                    setTimeout(() => setSavedToast(''), 4000)
                   }
-                }, 2000)
+                }, 10000)
               }}
               disabled={crawling}
               className="px-4 py-1.5 text-sm text-cupl-red border border-cupl-red/30 rounded-lg hover:bg-red-50 transition disabled:opacity-50 flex items-center gap-1.5 mx-auto"
             >
               {crawling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-              {crawling ? '正在抓取，请稍候...' : `单独抓取${platforms.find(p => p.id === activePlatform)?.name || ''}最新内容`}
+              {crawling ? '抓取中，新内容将陆续出现...' : `抓取${platforms.find(p => p.id === activePlatform)?.name || ''}最新内容`}
             </button>
           </div>
         )}
