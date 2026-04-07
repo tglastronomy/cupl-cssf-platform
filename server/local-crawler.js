@@ -8,7 +8,7 @@
 import axios from 'axios'
 import * as cheerio from 'cheerio'
 
-const BACKEND = 'https://cupl-cssf-api.onrender.com'
+const BACKEND = process.env.BACKEND_URL || 'http://39.107.73.81:3001'
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
 
 const TERMS = [

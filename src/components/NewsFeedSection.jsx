@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { platforms, mockNewsItems, newsCategories } from '../data/newsData'
 import { Heart, MessageCircle, Clock, ExternalLink, RefreshCw, Rss, X, User, Share2, Bookmark, Image, Loader2, AlertTriangle, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 
-const API_BASE = 'https://cupl-cssf-api.onrender.com'
+const API_BASE = 'http://39.107.73.81:3001'
 
 function PlatformBadge({ platform, size = 'sm' }) {
   const p = platforms.find(pl => pl.id === platform)
