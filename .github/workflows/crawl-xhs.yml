@@ -2,29 +2,30 @@ name: 小红书定时爬取
 
 on:
   schedule:
-    # 每30分钟自动运行一次
     - cron: '*/30 * * * *'
-  workflow_dispatch: # 支持手动触发
+  workflow_dispatch:
 
 jobs:
   crawl:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
       - name: 安装依赖
         run: cd server && npm install
       - name: 唤醒Render后端
         run: curl -s --max-time 60 https://cupl-cssf-api.onrender.com/api/stats || true
-      - name: 触发Render全平台爬取
+      - name: 触发Render爬取B站微信等
         run: |
           curl -s --max-time 10 -X POST https://cupl-cssf-api.onrender.com/api/crawl \
             -H "Content-Type: application/json" -d '{}' || true
-      - name: 运行小红书爬虫上传
+      - name: 第1轮小红书爬取
         run: cd server && node local-crawler.js
-      - name: 再次触发Render爬取补充其他平台
-        run: |
-          curl -s --max-time 10 -X POST https://cupl-cssf-api.onrender.com/api/crawl \
-            -H "Content-Type: application/json" -d '{}' || true
+      - name: 等待30秒
+        run: sleep 30
+      - name: 第2轮小红书爬取
+        run: cd server && node local-crawler.js

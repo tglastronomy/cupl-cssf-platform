@@ -338,12 +338,9 @@ export default function NewsFeedSection() {
       if (res.ok) {
         const data = await res.json()
         if (data.articles?.length > 0) {
+          // 后端有数据时，只用后端数据，不混入mock
           const backendItems = data.articles.map((a, i) => ({ ...a, _uid: `api_${a.id}_${i}` }))
-          const backendPlatforms = new Set(backendItems.map(a => a.platform))
-          const missingMock = mockNewsItems
-            .filter(m => !backendPlatforms.has(m.platform))
-            .map((m, i) => ({ ...m, _uid: `mock_${m.platform}_${m.id}_${i}` }))
-          setNewsItems([...backendItems, ...missingMock])
+          setNewsItems(backendItems)
           setBackendOnline(true)
           setLastUpdate(new Date())
           return true
@@ -445,22 +442,33 @@ export default function NewsFeedSection() {
         </form>
 
         {/* 状态栏 */}
-        <div className="bg-white rounded-xl p-4 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 border border-gray-100 shadow-sm">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full ${backendOnline ? 'bg-green-500 animate-live-dot' : 'bg-amber-500'}`}></span>
-              <span className="text-sm font-medium text-gray-700">
-                {backendOnline ? '抓取引擎运行中' : '展示模式（启动后端开启实时抓取）'}
-              </span>
+        <div className="bg-white rounded-xl p-4 mb-6 border border-gray-100 shadow-sm">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${backendOnline ? 'bg-green-500 animate-live-dot' : 'bg-amber-500'}`}></span>
+                <span className="text-sm font-medium text-gray-700">
+                  {backendOnline ? '系统运行中' : '展示模式'}
+                </span>
+              </div>
+              <span className="text-xs text-gray-400">已收录 {newsItems.length} 条</span>
             </div>
-            <span className="text-xs text-gray-400">更新: {lastUpdate.toLocaleTimeString('zh-CN')}</span>
-            <span className="text-xs text-gray-400">已收录 {newsItems.length} 条</span>
+            <button onClick={handleRefresh} disabled={isRefreshing}
+              className="flex items-center gap-2 px-4 py-2 bg-cupl-red text-white rounded-lg text-sm font-medium hover:bg-red-800 transition disabled:opacity-50">
+              {isRefreshing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              {crawling ? '抓取中...' : '立即抓取'}
+            </button>
           </div>
-          <button onClick={handleRefresh} disabled={isRefreshing}
-            className="flex items-center gap-2 px-4 py-2 bg-cupl-red text-white rounded-lg text-sm font-medium hover:bg-red-800 transition disabled:opacity-50">
-            {isRefreshing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-            {crawling ? '后台抓取中...' : '默认抓取'}
-          </button>
+          {/* 刷新时间信息 */}
+          <div className="mt-3 pt-3 border-t border-gray-50 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-gray-400">
+            <span>上次数据更新: {lastUpdate.toLocaleString('zh-CN', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>
+            <span>下次自动抓取: 约 {(() => {
+              const now = new Date()
+              const min = now.getMinutes()
+              const nextMin = min < 30 ? 30 - min : 60 - min
+              return nextMin
+            })()} 分钟后（每30分钟自动更新）</span>
+          </div>
         </div>
 
         {/* 平台筛选 + 单独抓取 */}
