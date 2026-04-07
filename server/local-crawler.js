@@ -267,18 +267,17 @@ async function main() {
     console.log(`  [${Math.min(i+10, unique.length)}/${unique.length}] content: ${withContent}, images: ${withImages}`)
   }
 
-  // === 严格过滤 ===
-  // 1) 必须有实质内容（full_content > 50字符）
-  // 2) 必须和法大考研相关（标题或内容包含关键词）
+  // === 过滤无关内容 ===
   const RELEVANT_KW = ['法大', '政法大学', 'CUPL', '刑法', '刑诉', '考研', '法学', '法硕',
     '复试', '初试', '分数线', '报录比', '参考书', '导师', '上岸', '备考',
-    '曲新久', '罗翔', '汪海燕', '张保生', '708', '808', '811']
+    '曲新久', '罗翔', '汪海燕', '张保生', '708', '808', '811',
+    '小红书', '经验', '笔记', '真题', '背诵']
 
   const qualified = unique.filter(a => {
-    // 有实质内容
-    if (a.full_content.length < 50 && a.summary.length < 50) return false
-    // 和考研相关
-    const text = a.title + ' ' + a.full_content
+    // 标题不能太短
+    if (a.title.length < 8) return false
+    // 标题或摘要包含关键词
+    const text = a.title + ' ' + a.summary + ' ' + a.full_content
     return RELEVANT_KW.some(k => text.includes(k))
   })
 
